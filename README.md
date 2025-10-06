@@ -1,6 +1,6 @@
-###🎮 Concept: Physics Sandbox with AI Tutor
 
 ---
+###🎮 Concept: Physics Sandbox with AI Tutor
 
 # 🪐 Gravity Slingshot / Orbit Simulator
 
@@ -87,6 +87,3 @@ The AI explains what’s happening — teaching real orbital mechanics concepts 
 ✅ **Result:** A visually stunning, interactive simulation that makes orbital physics fun and easy to understand — powered by AI.
 
 ---
-
-Would you like me to add a short **“Architecture Diagram (Markdown-style)”** showing how the **p5.js simulation ↔ AI API ↔ Chat UI** connect?
-It’s great for presentations or README visuals.
