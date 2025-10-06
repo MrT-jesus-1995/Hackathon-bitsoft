@@ -2,17 +2,24 @@ import React, { useState } from 'react';
 import PhysicsCanvas from './components/Canvas/PhysicsCanvas';
 import LaunchControls from './components/Controls/LaunchControls';
 import SimulationControls from './components/Controls/SimulationControls';
+import PlanetControls from './components/Controls/PlanetControls';
 import ChatOverlay from './components/AI/ChatOverlay';
 import Dashboard from './components/UI/Dashboard';
 import InfoPanel from './components/UI/InfoPanel';
 import CONFIG from './config';
 
 function App() {
+  // Initialize with single planet from config
+  const [planets, setPlanets] = useState(
+    CONFIG.planets.scenarios.single.planets
+  );
+
   const [simulationParams, setSimulationParams] = useState({
     gravity: 1.0,
     launchPower: 5,
     angle: 45,
     maxSimulationTime: CONFIG.simulation.maxSimulationTime,
+    planets: planets, // Add planets to simulation params
   });
 
   const [simulationState, setSimulationState] = useState({
@@ -46,6 +53,17 @@ function App() {
 
   const handleParamChange = (param, value) => {
     setSimulationParams(prev => ({ ...prev, [param]: value }));
+  };
+
+  const handlePlanetsChange = (newPlanets) => {
+    setPlanets(newPlanets);
+    setSimulationParams(prev => ({ ...prev, planets: newPlanets }));
+  };
+
+  const handleScenarioSelect = (scenarioPlanets) => {
+    handlePlanetsChange(scenarioPlanets);
+    // Reset simulation when changing planets
+    handleReset();
   };
 
   return (
@@ -93,6 +111,13 @@ function App() {
             <InfoPanel 
               outcome={simulationState.outcome}
               trajectoryLength={simulationState.trajectory.length}
+            />
+
+            {/* Planet Controls */}
+            <PlanetControls
+              planets={planets}
+              onPlanetsChange={handlePlanetsChange}
+              onScenarioSelect={handleScenarioSelect}
             />
 
             {/* Simulation Controls */}

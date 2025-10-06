@@ -20,14 +20,21 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
 
-    // Initialize physics engine
-    const planetPos = new Vector2D(WIDTH / 2, HEIGHT / 2);
+    // Initialize physics engine with planets from params
+    const planets = params.planets || CONFIG.planets.scenarios.single.planets;
+    const convertedPlanets = planets.map(p => ({
+      id: p.id,
+      pos: new Vector2D(p.x, p.y),
+      mass: p.mass,
+      radius: p.radius,
+      color: p.color,
+      name: p.name
+    }));
+
     engineRef.current = new PhysicsEngine({
       gravity: params.gravity,
-      planetMass: 1000,
-      planetRadius: 50,
       timeStep: 0.1,
-      planetPos,
+      planets: convertedPlanets,
     });
 
     // Start render loop
@@ -50,6 +57,23 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
       engineRef.current.setGravity(params.gravity);
     }
   }, [params.gravity]);
+
+  // Update planets when params.planets change
+  useEffect(() => {
+    if (engineRef.current && params.planets) {
+      const convertedPlanets = params.planets.map(p => ({
+        id: p.id,
+        pos: new Vector2D(p.x, p.y),
+        mass: p.mass,
+        radius: p.radius,
+        color: p.color,
+        name: p.name
+      }));
+      
+      // Clear and re-add all planets
+      engineRef.current.planets = convertedPlanets;
+    }
+  }, [params.planets]);
 
   // Handle simulation running state
   useEffect(() => {
@@ -134,8 +158,15 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
     // Draw stars background
     drawStars(ctx);
 
-    // Draw planet
-    drawPlanet(ctx, engine.planetPos.x, engine.planetPos.y, engine.planetRadius);
+    // Draw all planets
+    const planets = engine.getPlanets ? engine.getPlanets() : [
+      { pos: engine.planetPos, radius: engine.planetRadius, color: '#4a5fc1', name: 'Planet' }
+    ];
+    
+    planets.forEach(planet => {
+      const pos = planet.pos || { x: planet.x, y: planet.y };
+      drawPlanet(ctx, pos.x, pos.y, planet.radius, planet.color, planet.name);
+    });
 
     // Draw trajectory
     if (engine.trajectory.length > 1) {
@@ -153,8 +184,11 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
       drawLaunchPreview(ctx, launchStart, mousePos);
     }
 
-    // Draw orbit guides
-    drawOrbitGuides(ctx, engine.planetPos.x, engine.planetPos.y);
+    // Draw orbit guides for all planets
+    planets.forEach(planet => {
+      const pos = planet.pos || { x: planet.x, y: planet.y };
+      drawOrbitGuides(ctx, pos.x, pos.y);
+    });
   };
 
   const drawStars = (ctx) => {
@@ -167,20 +201,34 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
     }
   };
 
-  const drawPlanet = (ctx, x, y, radius) => {
+  const drawPlanet = (ctx, x, y, radius, color = '#4a5fc1', name = 'Planet') => {
+    // Convert hex to RGB for gradient
+    const hexToRgb = (hex) => {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : { r: 74, g: 95, b: 193 };
+    };
+    
+    const rgb = hexToRgb(color);
+    
     // Glow effect
     const gradient = ctx.createRadialGradient(x, y, radius * 0.5, x, y, radius * 2);
-    gradient.addColorStop(0, 'rgba(74, 95, 193, 0.3)');
-    gradient.addColorStop(1, 'rgba(74, 95, 193, 0)');
+    gradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.3)`);
+    gradient.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0)`);
     ctx.fillStyle = gradient;
     ctx.beginPath();
     ctx.arc(x, y, radius * 2, 0, Math.PI * 2);
     ctx.fill();
 
-    // Planet body
+    // Planet body with gradient
     const planetGradient = ctx.createRadialGradient(x - 10, y - 10, 0, x, y, radius);
-    planetGradient.addColorStop(0, '#6b7fd7');
-    planetGradient.addColorStop(1, '#4a5fc1');
+    // Lighter shade
+    planetGradient.addColorStop(0, `rgba(${Math.min(rgb.r + 40, 255)}, ${Math.min(rgb.g + 40, 255)}, ${Math.min(rgb.b + 40, 255)}, 1)`);
+    // Original color
+    planetGradient.addColorStop(1, color);
     ctx.fillStyle = planetGradient;
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, Math.PI * 2);
@@ -190,6 +238,13 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
     ctx.lineWidth = 2;
     ctx.stroke();
+    
+    // Planet name label
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.font = 'bold 12px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(name, x, y + radius + 15);
   };
 
   const drawTrajectory = (ctx, trajectory, outcome) => {

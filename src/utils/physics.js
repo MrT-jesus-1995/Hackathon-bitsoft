@@ -53,12 +53,29 @@ export class PhysicsEngine {
   constructor(config = {}) {
     // Physics constants
     this.G = config.gravity || 1.0; // Gravitational constant
-    this.planetMass = config.planetMass || 1000;
-    this.planetRadius = config.planetRadius || 50;
     this.timeStep = config.timeStep || 0.1;
     
-    // Planet position (center of screen)
-    this.planetPos = config.planetPos || new Vector2D(400, 300);
+    // Multiple planets support
+    this.planets = config.planets || [{
+      id: 'planet-1',
+      pos: config.planetPos || new Vector2D(400, 300),
+      mass: config.planetMass || 1000,
+      radius: config.planetRadius || 50,
+      color: '#4a5fc1',
+      name: 'Planet 1'
+    }];
+    
+    // Backwards compatibility - convert old single planet to array
+    if (config.planetPos && !config.planets) {
+      this.planets = [{
+        id: 'planet-1',
+        pos: config.planetPos,
+        mass: config.planetMass || 1000,
+        radius: config.planetRadius || 50,
+        color: '#4a5fc1',
+        name: 'Planet 1'
+      }];
+    }
     
     // Projectile properties
     this.projectile = {
@@ -79,22 +96,72 @@ export class PhysicsEngine {
   }
 
   /**
-   * Calculate gravitational force between planet and projectile
+   * Calculate combined gravitational force from all planets
    */
   calculateGravity() {
-    const direction = this.planetPos.sub(this.projectile.pos);
-    const distance = direction.mag();
+    let totalForce = new Vector2D(0, 0);
     
-    // Prevent division by zero and unrealistic forces
-    const minDistance = this.planetRadius;
-    const clampedDistance = Math.max(distance, minDistance);
+    // Sum gravitational forces from all planets
+    for (const planet of this.planets) {
+      const direction = planet.pos.sub(this.projectile.pos);
+      const distance = direction.mag();
+      
+      // Prevent division by zero and unrealistic forces
+      const minDistance = planet.radius;
+      const clampedDistance = Math.max(distance, minDistance);
+      
+      // F = G * (m1 * m2) / r^2
+      const forceMagnitude = (this.G * planet.mass * this.projectile.mass) / 
+                             (clampedDistance * clampedDistance);
+      
+      const force = direction.normalize().mult(forceMagnitude);
+      totalForce = totalForce.add(force);
+    }
     
-    // F = G * (m1 * m2) / r^2
-    const forceMagnitude = (this.G * this.planetMass * this.projectile.mass) / 
-                           (clampedDistance * clampedDistance);
-    
-    const force = direction.normalize().mult(forceMagnitude);
-    return force;
+    return totalForce;
+  }
+  
+  /**
+   * Add a new planet to the simulation
+   */
+  addPlanet(planet) {
+    const newPlanet = {
+      id: planet.id || `planet-${Date.now()}`,
+      pos: planet.pos || new Vector2D(400, 300),
+      mass: planet.mass || 1000,
+      radius: planet.radius || 50,
+      color: planet.color || '#4a5fc1',
+      name: planet.name || `Planet ${this.planets.length + 1}`
+    };
+    this.planets.push(newPlanet);
+    return newPlanet;
+  }
+  
+  /**
+   * Remove a planet by ID
+   */
+  removePlanet(planetId) {
+    const index = this.planets.findIndex(p => p.id === planetId);
+    if (index > -1) {
+      this.planets.splice(index, 1);
+    }
+  }
+  
+  /**
+   * Update a planet's properties
+   */
+  updatePlanet(planetId, updates) {
+    const planet = this.planets.find(p => p.id === planetId);
+    if (planet) {
+      Object.assign(planet, updates);
+    }
+  }
+  
+  /**
+   * Get all planets
+   */
+  getPlanets() {
+    return this.planets;
   }
 
   /**
@@ -141,36 +208,52 @@ export class PhysicsEngine {
    * Check if simulation has reached an outcome
    */
   checkOutcome() {
-    const distance = this.projectile.pos.sub(this.planetPos).mag();
-    
-    // Crash: projectile hit the planet
-    if (distance <= this.planetRadius) {
-      this.outcome = 'crash';
-      this.isActive = false;
-      return;
+    // Check collision with any planet
+    for (const planet of this.planets) {
+      const distance = this.projectile.pos.sub(planet.pos).mag();
+      
+      // Crash: projectile hit a planet
+      if (distance <= planet.radius) {
+        this.outcome = 'crash';
+        this.isActive = false;
+        return;
+      }
     }
     
-    // Escape: projectile is too far away
-    const escapeDistance = 800; // Adjust based on canvas size
-    if (distance > escapeDistance) {
+    // Escape: projectile is too far from all planets
+    const escapeDistance = 1000; // Increased for multiple planets
+    let isNearAnyPlanet = false;
+    
+    for (const planet of this.planets) {
+      const distance = this.projectile.pos.sub(planet.pos).mag();
+      if (distance < escapeDistance) {
+        isNearAnyPlanet = true;
+        break;
+      }
+    }
+    
+    if (!isNearAnyPlanet) {
       this.outcome = 'escape';
       this.isActive = false;
       return;
     }
     
-    // Check for stable orbit (velocity perpendicular to gravity, consistent distance)
+    // Check for stable orbit around any planet
     if (this.trajectory.length > 100) {
-      const recentDistances = this.trajectory.slice(-50).map(pos => 
-        pos.sub(this.planetPos).mag()
-      );
-      
-      const avgDistance = recentDistances.reduce((a, b) => a + b, 0) / recentDistances.length;
-      const variance = recentDistances.reduce((sum, d) => sum + Math.pow(d - avgDistance, 2), 0) / recentDistances.length;
-      
-      // If distance is relatively stable, consider it an orbit
-      if (variance < 100 && avgDistance > this.planetRadius * 2) {
-        this.outcome = 'orbit';
-        // Don't stop the simulation for orbit, let it continue
+      for (const planet of this.planets) {
+        const recentDistances = this.trajectory.slice(-50).map(pos => 
+          pos.sub(planet.pos).mag()
+        );
+        
+        const avgDistance = recentDistances.reduce((a, b) => a + b, 0) / recentDistances.length;
+        const variance = recentDistances.reduce((sum, d) => sum + Math.pow(d - avgDistance, 2), 0) / recentDistances.length;
+        
+        // If distance is relatively stable around this planet, consider it an orbit
+        if (variance < 100 && avgDistance > planet.radius * 2) {
+          this.outcome = 'orbit';
+          // Don't stop the simulation for orbit, let it continue
+          break;
+        }
       }
     }
   }
@@ -179,23 +262,40 @@ export class PhysicsEngine {
    * Get current simulation data
    */
   getData() {
-    const distance = this.projectile.pos.sub(this.planetPos).mag();
     const speed = this.projectile.vel.mag();
     
-    // Calculate orbital energy (kinetic + potential)
+    // Calculate kinetic energy
     const kineticEnergy = 0.5 * this.projectile.mass * speed * speed;
-    const potentialEnergy = -(this.G * this.planetMass * this.projectile.mass) / distance;
-    const totalEnergy = kineticEnergy + potentialEnergy;
+    
+    // Calculate total potential energy from all planets
+    let totalPotentialEnergy = 0;
+    let closestDistance = Infinity;
+    let closestPlanet = this.planets[0];
+    
+    for (const planet of this.planets) {
+      const distance = this.projectile.pos.sub(planet.pos).mag();
+      const planetPotentialEnergy = -(this.G * planet.mass * this.projectile.mass) / distance;
+      totalPotentialEnergy += planetPotentialEnergy;
+      
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestPlanet = planet;
+      }
+    }
+    
+    const totalEnergy = kineticEnergy + totalPotentialEnergy;
     
     return {
       position: this.projectile.pos,
       velocity: this.projectile.vel,
-      distance,
+      distance: closestDistance,
+      closestPlanet: closestPlanet.name,
       speed,
       kineticEnergy,
-      potentialEnergy,
+      potentialEnergy: totalPotentialEnergy,
       totalEnergy,
       trajectoryLength: this.trajectory.length,
+      planetCount: this.planets.length,
     };
   }
 

@@ -105,6 +105,180 @@ export const CONFIG = {
     },
   },
 
+  // Multi-Planet Settings
+  planets: {
+    // Default planet colors
+    colors: [
+      '#4a5fc1', // Blue
+      '#ef4444', // Red
+      '#10b981', // Green
+      '#f59e0b', // Orange
+      '#8b5cf6', // Purple
+      '#ec4899', // Pink
+    ],
+    
+    // Planet presets for multi-planet scenarios
+    scenarios: {
+      single: {
+        name: '🌍 Single Planet',
+        description: 'Classic single planet gravity',
+        planets: [
+          {
+            id: 'planet-1',
+            x: 400,
+            y: 300,
+            mass: 1000,
+            radius: 50,
+            color: '#4a5fc1',
+            name: 'Earth'
+          }
+        ]
+      },
+      binary: {
+        name: '⚛️ Binary System',
+        description: 'Two planets of equal mass',
+        planets: [
+          {
+            id: 'planet-1',
+            x: 300,
+            y: 300,
+            mass: 800,
+            radius: 45,
+            color: '#4a5fc1',
+            name: 'Alpha'
+          },
+          {
+            id: 'planet-2',
+            x: 500,
+            y: 300,
+            mass: 800,
+            radius: 45,
+            color: '#ef4444',
+            name: 'Beta'
+          }
+        ]
+      },
+      lagrange: {
+        name: '🔺 Lagrange Points',
+        description: 'Three body problem configuration',
+        planets: [
+          {
+            id: 'planet-1',
+            x: 400,
+            y: 300,
+            mass: 1200,
+            radius: 55,
+            color: '#f59e0b',
+            name: 'Sun'
+          },
+          {
+            id: 'planet-2',
+            x: 550,
+            y: 300,
+            mass: 400,
+            radius: 30,
+            color: '#10b981',
+            name: 'Jupiter'
+          },
+          {
+            id: 'planet-3',
+            x: 650,
+            y: 300,
+            mass: 100,
+            radius: 15,
+            color: '#8b5cf6',
+            name: 'Asteroid'
+          }
+        ]
+      },
+      triangle: {
+        name: '🔼 Triangle Formation',
+        description: 'Three planets in triangle',
+        planets: [
+          {
+            id: 'planet-1',
+            x: 400,
+            y: 200,
+            mass: 700,
+            radius: 40,
+            color: '#4a5fc1',
+            name: 'Alpha'
+          },
+          {
+            id: 'planet-2',
+            x: 300,
+            y: 380,
+            mass: 700,
+            radius: 40,
+            color: '#ef4444',
+            name: 'Beta'
+          },
+          {
+            id: 'planet-3',
+            x: 500,
+            y: 380,
+            mass: 700,
+            radius: 40,
+            color: '#10b981',
+            name: 'Gamma'
+          }
+        ]
+      },
+      sunPlanets: {
+        name: '☀️ Solar System',
+        description: 'Sun with smaller planets',
+        planets: [
+          {
+            id: 'sun',
+            x: 400,
+            y: 300,
+            mass: 2000,
+            radius: 60,
+            color: '#f59e0b',
+            name: 'Sun'
+          },
+          {
+            id: 'planet-1',
+            x: 550,
+            y: 300,
+            mass: 200,
+            radius: 20,
+            color: '#10b981',
+            name: 'Planet'
+          },
+          {
+            id: 'planet-2',
+            x: 250,
+            y: 300,
+            mass: 150,
+            radius: 18,
+            color: '#8b5cf6',
+            name: 'Moon'
+          }
+        ]
+      }
+    },
+    
+    // Editable planet properties
+    editableProps: ['x', 'y', 'mass', 'radius', 'color', 'name'],
+    
+    // Default new planet template
+    defaultPlanet: {
+      mass: 800,
+      radius: 40,
+      color: '#4a5fc1',
+      name: 'New Planet'
+    },
+    
+    // Limits for planet properties
+    limits: {
+      mass: { min: 50, max: 3000, step: 50 },
+      radius: { min: 10, max: 100, step: 5 },
+      x: { min: 50, max: 750, step: 10 },
+      y: { min: 50, max: 550, step: 10 },
+    },
+  },
+
   // UI Settings
   ui: {
     // Animation durations (milliseconds)
