@@ -5,12 +5,14 @@ import SimulationControls from './components/Controls/SimulationControls';
 import ChatOverlay from './components/AI/ChatOverlay';
 import Dashboard from './components/UI/Dashboard';
 import InfoPanel from './components/UI/InfoPanel';
+import CONFIG from './config';
 
 function App() {
   const [simulationParams, setSimulationParams] = useState({
     gravity: 1.0,
     launchPower: 5,
     angle: 45,
+    maxSimulationTime: CONFIG.simulation.maxSimulationTime,
   });
 
   const [simulationState, setSimulationState] = useState({

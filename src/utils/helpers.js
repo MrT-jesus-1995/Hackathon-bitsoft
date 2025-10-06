@@ -56,6 +56,8 @@ export function getOutcomeColor(outcome) {
       return '#fbbf24'; // yellow
     case 'crash':
       return '#ef4444'; // red
+    case 'timeout':
+      return '#a855f7'; // purple
     default:
       return '#94a3b8'; // gray
   }
@@ -72,6 +74,8 @@ export function getOutcomeEmoji(outcome) {
       return '🚀';
     case 'crash':
       return '💥';
+    case 'timeout':
+      return '⏱️';
     default:
       return '🌟';
   }
@@ -88,6 +92,8 @@ export function getOutcomeDescription(outcome) {
       return 'Gravity Slingshot Escape!';
     case 'crash':
       return 'Crashed into Planet';
+    case 'timeout':
+      return 'Time Limit Reached';
     default:
       return 'Ready to Launch';
   }

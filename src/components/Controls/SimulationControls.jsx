@@ -1,6 +1,15 @@
 import React from 'react';
+import CONFIG from '../../config';
 
 const SimulationControls = ({ params, onParamChange, disabled }) => {
+  // Format time for display
+  const formatTime = (ms) => {
+    if (ms >= 60000) {
+      return `${(ms / 60000).toFixed(1)}m`;
+    }
+    return `${(ms / 1000).toFixed(0)}s`;
+  };
+
   return (
     <div className="bg-space-medium/30 backdrop-blur-sm rounded-2xl p-6 border border-space-light/20">
       <h2 className="text-xl font-bold text-white mb-4 flex items-center">
@@ -18,7 +27,7 @@ const SimulationControls = ({ params, onParamChange, disabled }) => {
           <input
             type="range"
             min="0.1"
-            max="3"
+            max="100"
             step="0.1"
             value={params.gravity}
             onChange={(e) => onParamChange('gravity', parseFloat(e.target.value))}
@@ -74,6 +83,34 @@ const SimulationControls = ({ params, onParamChange, disabled }) => {
             <span>180°</span>
             <span>360°</span>
           </div>
+        </div>
+
+        {/* Max Simulation Time Control */}
+        <div>
+          <label className="flex items-center justify-between text-sm font-medium text-gray-300 mb-2">
+            <span>⏱️ Max Simulation Time</span>
+            <span className="text-orange-400 font-mono">
+              {formatTime(params.maxSimulationTime || CONFIG.simulation.maxSimulationTime)}
+            </span>
+          </label>
+          <input
+            type="range"
+            min={CONFIG.simulation.ranges.maxTime.min}
+            max={CONFIG.simulation.ranges.maxTime.max}
+            step={CONFIG.simulation.ranges.maxTime.step}
+            value={params.maxSimulationTime || CONFIG.simulation.maxSimulationTime}
+            onChange={(e) => onParamChange('maxSimulationTime', parseInt(e.target.value))}
+            disabled={disabled}
+            className="w-full h-2 bg-space-light rounded-lg appearance-none cursor-pointer slider"
+          />
+          <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <span>5s</span>
+            <span>1m</span>
+            <span>2m</span>
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            Simulation will auto-stop after this time
+          </p>
         </div>
       </div>
 

@@ -84,6 +84,14 @@ const InfoPanel = ({ outcome, trajectoryLength }) => {
           </p>
         </div>
       )}
+
+      {outcome === 'timeout' && (
+        <div className="mt-4 p-3 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+          <p className="text-xs text-purple-300">
+            ⏱️ <strong>Time's up!</strong> The simulation reached the maximum time limit. Increase the time limit or try different parameters for a definitive result.
+          </p>
+        </div>
+      )}
     </div>
   );
 };

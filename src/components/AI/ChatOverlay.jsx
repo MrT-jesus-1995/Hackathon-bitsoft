@@ -1,11 +1,52 @@
 import React, { useState, useEffect } from 'react';
 import { getAIExplanation } from '../../utils/api';
 import { isAPIKeyConfigured } from '../../utils/helpers';
+import CONFIG from '../../config';
 
 const ChatOverlay = ({ context, onClose }) => {
   const [explanation, setExplanation] = useState('');
+  const [displayedText, setDisplayedText] = useState('');
   const [loading, setLoading] = useState(true);
+  const [typing, setTyping] = useState(false);
   const [error, setError] = useState(null);
+  const [loadingDots, setLoadingDots] = useState('.');
+
+  // Animated loading dots
+  useEffect(() => {
+    if (!loading) return;
+    
+    const interval = setInterval(() => {
+      setLoadingDots(prev => {
+        if (prev === '...') return '.';
+        return prev + '.';
+      });
+    }, CONFIG.ai.loadingDotsSpeed);
+
+    return () => clearInterval(interval);
+  }, [loading]);
+
+  // Typing animation effect
+  useEffect(() => {
+    if (!explanation || typing || loading) return;
+    
+    setTyping(true);
+    setDisplayedText('');
+    
+    let currentIndex = 0;
+    const typingSpeed = CONFIG.ai.typingSpeed;
+    
+    const typeInterval = setInterval(() => {
+      if (currentIndex < explanation.length) {
+        setDisplayedText(explanation.substring(0, currentIndex + 1));
+        currentIndex++;
+      } else {
+        setTyping(false);
+        clearInterval(typeInterval);
+      }
+    }, typingSpeed);
+
+    return () => clearInterval(typeInterval);
+  }, [explanation, loading]);
 
   useEffect(() => {
     const fetchExplanation = async () => {
@@ -29,7 +70,13 @@ const ChatOverlay = ({ context, onClose }) => {
       try {
         setLoading(true);
         setError(null);
-        const result = await getAIExplanation(context);
+        
+        // Add minimum delay to show loading state (makes it feel more intentional)
+        const [result] = await Promise.all([
+          getAIExplanation(context),
+          new Promise(resolve => setTimeout(resolve, CONFIG.ai.minLoadingTime))
+        ]);
+        
         setExplanation(result);
       } catch (err) {
         console.error('AI explanation error:', err);
@@ -68,8 +115,23 @@ const ChatOverlay = ({ context, onClose }) => {
         <div className="p-6 overflow-y-auto max-h-[60vh]">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-500 mb-4"></div>
-              <p className="text-gray-400 animate-pulse">Generating explanation...</p>
+              <div className="relative">
+                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-500"></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-3xl">🤖</span>
+                </div>
+              </div>
+              <p className="text-gray-400 mt-6 text-lg font-medium">
+                AI is thinking{loadingDots}
+              </p>
+              <p className="text-gray-500 text-sm mt-2">
+                Analyzing your simulation data
+              </p>
+              <div className="mt-4 flex space-x-2">
+                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+              </div>
             </div>
           ) : error ? (
             <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
@@ -93,12 +155,35 @@ const ChatOverlay = ({ context, onClose }) => {
                      context?.outcome === 'escape' ? '🚀 Gravity Slingshot' :
                      '💥 Impact'}
                   </span>
+                  {typing && (
+                    <span className="text-xs text-gray-500 flex items-center">
+                      <span className="animate-pulse">AI is typing...</span>
+                    </span>
+                  )}
                 </div>
 
-                {/* AI Explanation */}
+                {/* AI Explanation with typing effect */}
                 <div className="text-gray-200 space-y-4 whitespace-pre-wrap">
-                  {explanation}
+                  {displayedText}
+                  {typing && (
+                    <span className="inline-block w-2 h-4 bg-purple-500 ml-1 animate-pulse"></span>
+                  )}
                 </div>
+
+                {/* Skip typing button */}
+                {typing && (
+                  <div className="mt-4 flex justify-end">
+                    <button
+                      onClick={() => {
+                        setDisplayedText(explanation);
+                        setTyping(false);
+                      }}
+                      className="text-xs text-purple-400 hover:text-purple-300 px-3 py-1 border border-purple-500/30 rounded-lg hover:bg-purple-500/10 transition-all"
+                    >
+                      ⏩ Skip typing animation
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Simulation Data */}

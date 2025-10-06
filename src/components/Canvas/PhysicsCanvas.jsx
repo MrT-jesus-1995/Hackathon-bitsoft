@@ -1,11 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { PhysicsEngine, Vector2D } from '../../utils/physics';
 import { degreesToRadians } from '../../utils/helpers';
+import CONFIG from '../../config';
 
 const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRunning }) => {
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
   const animationRef = useRef(null);
+  const simulationStartTime = useRef(null);
+  const updateCount = useRef(0);
   const [mousePos, setMousePos] = useState(null);
   const [launchStart, setLaunchStart] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -68,29 +71,57 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
       );
       
       engineRef.current.launch(startPos, velocity);
+      simulationStartTime.current = Date.now();
+      updateCount.current = 0;
     }
   }, [isRunning, params]);
 
-  // Physics update loop
+  // Physics update loop with time limits
   useEffect(() => {
     if (!isRunning) return;
 
+    const maxTime = params.maxSimulationTime || CONFIG.simulation.maxSimulationTime;
+    const maxUpdates = CONFIG.simulation.maxSimulationUpdates;
+
     const updateInterval = setInterval(() => {
       if (engineRef.current && engineRef.current.isActive) {
+        // Check time limit
+        const elapsedTime = Date.now() - simulationStartTime.current;
+        if (elapsedTime >= maxTime) {
+          console.log(`Simulation stopped: Time limit reached (${maxTime}ms)`);
+          engineRef.current.isActive = false;
+          const data = engineRef.current.getData();
+          onSimulationComplete(engineRef.current.outcome || 'timeout', data);
+          clearInterval(updateInterval);
+          return;
+        }
+
+        // Check update count limit
+        updateCount.current++;
+        if (updateCount.current >= maxUpdates) {
+          console.log(`Simulation stopped: Update limit reached (${maxUpdates} updates)`);
+          engineRef.current.isActive = false;
+          const data = engineRef.current.getData();
+          onSimulationComplete(engineRef.current.outcome || 'timeout', data);
+          clearInterval(updateInterval);
+          return;
+        }
+
+        // Update physics
         engineRef.current.update();
         onTrajectoryUpdate(engineRef.current.trajectory);
 
-        // Check if simulation ended
+        // Check if simulation ended naturally
         if (!engineRef.current.isActive && engineRef.current.outcome) {
           const data = engineRef.current.getData();
           onSimulationComplete(engineRef.current.outcome, data);
           clearInterval(updateInterval);
         }
       }
-    }, 16); // ~60 FPS
+    }, CONFIG.physics.updateRate); // Use config update rate
 
     return () => clearInterval(updateInterval);
-  }, [isRunning, onSimulationComplete, onTrajectoryUpdate]);
+  }, [isRunning, onSimulationComplete, onTrajectoryUpdate, params.maxSimulationTime]);
 
   const drawScene = (ctx) => {
     const engine = engineRef.current;

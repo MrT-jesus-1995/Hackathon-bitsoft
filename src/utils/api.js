@@ -3,6 +3,7 @@
  */
 
 import axios from 'axios';
+import CONFIG from '../config';
 
 const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY;
 const AI_MODEL = process.env.REACT_APP_AI_MODEL || 'gpt-4o-mini';
@@ -58,12 +59,14 @@ Keep it fun and educational!
         ],
         temperature: 0.7,
         max_tokens: 800,
+        stream: false, // Ensure we get the complete response
       },
       {
         headers: {
           'Authorization': `Bearer ${OPENAI_API_KEY}`,
           'Content-Type': 'application/json',
         },
+        timeout: CONFIG.ai.apiTimeout, // Configurable timeout to give GPT time to respond
       }
     );
 
