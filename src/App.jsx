@@ -71,48 +71,71 @@ function App() {
     handleReset();
   };
 
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-space-dark via-space-medium to-space-dark">
-      {/* Header */}
-      <header className="bg-space-medium/50 backdrop-blur-md border-b border-space-light/30 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="text-4xl">🪐</div>
-              <div>
-                <h1 className="text-2xl font-bold text-white">
-                  Gravity Slingshot Simulator
-                </h1>
-                <p className="text-sm text-gray-400">
-                  Learn orbital mechanics with AI
-                </p>
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-space-dark via-space-medium to-space-dark flex flex-col">
+      {/* Compact Header */}
+      <header className="bg-space-medium/50 backdrop-blur-md border-b border-space-light/30 z-40">
+        <div className="px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="text-3xl">🪐</div>
+            <div>
+              <h1 className="text-xl font-bold text-white">
+                Gravity Slingshot Simulator
+              </h1>
+              <p className="text-xs text-gray-400">
+                Learn orbital mechanics with AI
+              </p>
             </div>
-            <Dashboard simulationState={simulationState} />
           </div>
+          <Dashboard simulationState={simulationState} />
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Canvas Section - Takes up 2 columns */}
-          <div className="lg:col-span-2">
-            <div className="bg-space-medium/30 backdrop-blur-sm rounded-2xl p-6 border border-space-light/20">
-              <PhysicsCanvas
-                params={simulationParams}
-                onSimulationComplete={handleSimulationComplete}
-                onTrajectoryUpdate={(trajectory) => 
-                  setSimulationState(prev => ({ ...prev, trajectory }))
-                }
-                isRunning={simulationState.isRunning}
-                onLaunchFromCanvas={handleLaunchFromCanvas}
-              />
-            </div>
-          </div>
+      {/* Main Content - Fullscreen Canvas with Sidebar */}
+      <main className="flex-1 flex overflow-hidden relative">
+        {/* Fullscreen Canvas */}
+        <div className="flex-1 relative">
+          <PhysicsCanvas
+            params={simulationParams}
+            onSimulationComplete={handleSimulationComplete}
+            onTrajectoryUpdate={(trajectory) => 
+              setSimulationState(prev => ({ ...prev, trajectory }))
+            }
+            isRunning={simulationState.isRunning}
+            onLaunchFromCanvas={handleLaunchFromCanvas}
+          />
+        </div>
 
-          {/* Controls Section */}
-          <div className="space-y-6">
+        {/* Sidebar Toggle Button */}
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className={`absolute top-4 right-4 z-50 bg-space-medium/90 backdrop-blur-md hover:bg-space-medium text-white p-3 rounded-lg border border-space-light/30 transition-all duration-300 ${
+            sidebarOpen ? 'mr-96' : ''
+          }`}
+          title={sidebarOpen ? 'Close Sidebar' : 'Open Sidebar'}
+        >
+          {sidebarOpen ? '▶' : '◀'}
+        </button>
+
+        {/* Collapsible Sidebar */}
+        <div
+          className={`absolute top-0 right-0 h-full w-96 bg-space-dark/95 backdrop-blur-md border-l border-space-light/30 shadow-2xl transition-transform duration-300 ease-in-out overflow-y-auto ${
+            sidebarOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
+        >
+          <div className="p-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">Controls</h2>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
             {/* Info Panel */}
             <InfoPanel 
               outcome={simulationState.outcome}
@@ -161,12 +184,6 @@ function App() {
           onClose={() => setShowAI(false)}
         />
       )}
-
-      {/* Footer */}
-      <footer className="mt-12 pb-8 text-center text-gray-500 text-sm">
-        <p>Made with ❤️ for learning physics through interactive simulation</p>
-        <p className="mt-2">Powered by OpenAI • Built with React & p5.js</p>
-      </footer>
     </div>
   );
 }

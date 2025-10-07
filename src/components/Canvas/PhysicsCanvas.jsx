@@ -700,9 +700,9 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
   };
 
   return (
-    <div className="flex flex-col items-center relative">
-      {/* Zoom Controls */}
-      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 bg-space-dark/80 backdrop-blur-sm p-3 rounded-lg border border-space-light/30">
+    <div className="w-full h-full relative bg-space-dark">
+      {/* Zoom Controls - Top Left */}
+      <div className="absolute top-4 left-4 z-10 flex flex-col gap-2 bg-space-dark/80 backdrop-blur-sm p-3 rounded-lg border border-space-light/30">
         <button
           onClick={handleZoomIn}
           className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded transition-colors font-bold text-lg"
@@ -729,6 +729,26 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
         </button>
       </div>
 
+      {/* Status Bar - Bottom Center */}
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10 bg-space-dark/80 backdrop-blur-sm px-6 py-3 rounded-lg border border-space-light/30">
+        <div className="text-center text-sm text-gray-300">
+          {isRunning ? (
+            <span className="text-yellow-400">🚀 Simulation running...</span>
+          ) : isDragging ? (
+            <span className="text-purple-400">🎯 Release to launch projectile!</span>
+          ) : (
+            <div className="flex items-center gap-4">
+              <span>🖱️ <strong>Left-click + drag</strong> to launch</span>
+              <span className="text-gray-600">|</span>
+              <span>🖱️ <strong>Right-click</strong> to pan</span>
+              <span className="text-gray-600">|</span>
+              <span>🔍 <strong>Wheel</strong> to zoom</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Fullscreen Canvas */}
       <canvas
         ref={canvasRef}
         width={WIDTH}
@@ -738,22 +758,8 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
         onMouseUp={handleMouseUp}
         onWheel={handleWheel}
         onContextMenu={(e) => e.preventDefault()}
-        className="bg-space-dark rounded-xl border-2 border-space-light/30 shadow-2xl cursor-crosshair"
-        style={{ maxWidth: '100%', height: 'auto' }}
+        className="w-full h-full cursor-crosshair"
       />
-      <div className="mt-4 text-center text-sm text-gray-400">
-        {isRunning ? (
-          <span className="text-yellow-400">🚀 Simulation running...</span>
-        ) : isDragging ? (
-          <span className="text-purple-400">🎯 Release to launch projectile!</span>
-        ) : (
-          <div className="space-y-1">
-            <div>🖱️ <strong>Left-click + drag</strong> to aim and launch</div>
-            <div>🖱️ <strong>Right-click + drag</strong> or <strong>Shift + drag</strong> to pan</div>
-            <div>🔍 <strong>Mouse wheel</strong> to zoom</div>
-          </div>
-        )}
-      </div>
     </div>
   );
 };
