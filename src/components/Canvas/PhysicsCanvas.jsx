@@ -17,8 +17,15 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
   const isDraggingRef = useRef(false); // Use ref for immediate updates in render loop
   const [isDragging, setIsDragging] = useState(false); // State for UI updates only
 
-  const WIDTH = 800;
-  const HEIGHT = 600;
+  // Zoom and Pan state
+  const zoom = useRef(1); // Zoom level (1 = 100%)
+  const cameraOffset = useRef({ x: 0, y: 0 }); // Camera pan offset
+  const isPanning = useRef(false); // Is user panning?
+  const lastPanPos = useRef(null); // Last pan position
+  const [zoomLevel, setZoomLevel] = useState(1); // State for UI display
+
+  const WIDTH = 1200; // Larger canvas
+  const HEIGHT = 800;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -169,6 +176,44 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
     return () => clearInterval(updateInterval);
   }, [isRunning, onSimulationComplete, onTrajectoryUpdate, params.maxSimulationTime]);
 
+  // Coordinate transformation helpers
+  // Inverse of: translate(WIDTH/2, HEIGHT/2), scale(zoom), translate(-WIDTH/2 + offset.x/zoom, -HEIGHT/2 + offset.y/zoom)
+  const screenToWorld = (screenX, screenY) => {
+    // Step 1: Subtract the center translation
+    let x = screenX - WIDTH / 2;
+    let y = screenY - HEIGHT / 2;
+    
+    // Step 2: Inverse scale (divide by zoom)
+    x = x / zoom.current;
+    y = y / zoom.current;
+    
+    // Step 3: Inverse the second translation
+    x = x - (-WIDTH / 2 + cameraOffset.current.x / zoom.current);
+    y = y - (-HEIGHT / 2 + cameraOffset.current.y / zoom.current);
+    
+    return { x, y };
+  };
+
+  const worldToScreen = (worldX, worldY) => {
+    // Forward transform
+    let x = worldX;
+    let y = worldY;
+    
+    // Step 1: Apply second translation
+    x = x + (-WIDTH / 2 + cameraOffset.current.x / zoom.current);
+    y = y + (-HEIGHT / 2 + cameraOffset.current.y / zoom.current);
+    
+    // Step 2: Apply scale
+    x = x * zoom.current;
+    y = y * zoom.current;
+    
+    // Step 3: Apply first translation
+    x = x + WIDTH / 2;
+    y = y + HEIGHT / 2;
+    
+    return { x, y };
+  };
+
   const drawScene = (ctx) => {
     const engine = engineRef.current;
     if (!engine) return;
@@ -176,6 +221,14 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
     // Clear canvas
     ctx.fillStyle = '#0a0e27';
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+    // Save context state
+    ctx.save();
+
+    // Apply camera transform (pan and zoom)
+    ctx.translate(WIDTH / 2, HEIGHT / 2);
+    ctx.scale(zoom.current, zoom.current);
+    ctx.translate(-WIDTH / 2 + cameraOffset.current.x / zoom.current, -HEIGHT / 2 + cameraOffset.current.y / zoom.current);
 
     // Draw stars background
     drawStars(ctx);
@@ -211,6 +264,9 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
       const pos = planet.pos || { x: planet.x, y: planet.y };
       drawOrbitGuides(ctx, pos.x, pos.y);
     });
+
+    // Restore context state
+    ctx.restore();
   };
 
   const drawStars = (ctx) => {
@@ -257,22 +313,30 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
     ctx.fill();
 
     // Planet outline
+    const uiScale = 1 / zoom.current;
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2 * uiScale;
     ctx.stroke();
     
-    // Planet name label
+    // Planet name label (compensate for zoom)
+    ctx.save();
+    ctx.translate(x, y + radius + 15 * uiScale);
+    ctx.scale(uiScale, uiScale);
+    
     ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
     ctx.font = 'bold 12px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(name, x, y + radius + 15);
+    ctx.fillText(name, 0, 0);
+    
+    ctx.restore();
   };
 
   const drawTrajectory = (ctx, trajectory, outcome) => {
     if (trajectory.length < 2) return;
 
-    ctx.lineWidth = 2;
+    const uiScale = 1 / zoom.current;
+    ctx.lineWidth = 2 * uiScale;
     ctx.lineCap = 'round';
 
     // Color based on outcome
@@ -292,24 +356,32 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
   };
 
   const drawProjectile = (ctx, x, y) => {
+    const uiScale = 1 / zoom.current;
+    
     // Glow
-    const glowGradient = ctx.createRadialGradient(x, y, 2, x, y, 10);
+    const glowGradient = ctx.createRadialGradient(x, y, 2 * uiScale, x, y, 10 * uiScale);
     glowGradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
     glowGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
     ctx.fillStyle = glowGradient;
     ctx.beginPath();
-    ctx.arc(x, y, 10, 0, Math.PI * 2);
+    ctx.arc(x, y, 10 * uiScale, 0, Math.PI * 2);
     ctx.fill();
 
     // Projectile
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.arc(x, y, 5, 0, Math.PI * 2);
+    ctx.arc(x, y, 5 * uiScale, 0, Math.PI * 2);
     ctx.fill();
   };
 
   const drawLaunchPreview = (ctx, start, end) => {
-    console.log('🎨 Drawing launch preview', { start, end, isDragging: isDraggingRef.current });
+    console.log('🎨 Drawing launch preview', { 
+      start, 
+      end, 
+      isDragging: isDraggingRef.current, 
+      zoom: zoom.current,
+      uiScale: 1 / zoom.current 
+    });
     const dx = end.x - start.x;
     const dy = end.y - start.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
@@ -348,16 +420,19 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
       const outcomeColor = CONFIG.prediction.visual.colors[prediction.outcome] || 
                           CONFIG.prediction.visual.colors.unknown;
       
+      // Compensate for zoom in trajectory visual elements
+      const uiScale = 1 / zoom.current;
+      
       // Draw glow effect if enabled
       if (CONFIG.prediction.visual.glowEnabled) {
         ctx.save();
         ctx.shadowColor = outcomeColor;
-        ctx.shadowBlur = CONFIG.prediction.visual.glowBlur;
+        ctx.shadowBlur = CONFIG.prediction.visual.glowBlur * uiScale;
         
         // Draw trajectory path as dashed line
         ctx.strokeStyle = outcomeColor;
-        ctx.lineWidth = CONFIG.prediction.visual.lineWidth;
-        ctx.setLineDash(CONFIG.prediction.visual.lineDash);
+        ctx.lineWidth = CONFIG.prediction.visual.lineWidth * uiScale;
+        ctx.setLineDash(CONFIG.prediction.visual.lineDash.map(v => v * uiScale));
         ctx.beginPath();
         ctx.moveTo(prediction.points[0].x, prediction.points[0].y);
         
@@ -374,21 +449,24 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
       for (let i = 0; i < prediction.points.length; i += Math.floor(CONFIG.prediction.visual.dotSpacing / 5)) {
         const point = prediction.points[i];
         ctx.beginPath();
-        ctx.arc(point.x, point.y, CONFIG.prediction.visual.dotRadius, 0, Math.PI * 2);
+        ctx.arc(point.x, point.y, CONFIG.prediction.visual.dotRadius * uiScale, 0, Math.PI * 2);
         ctx.fill();
       }
     }
     
+    // Compensate for zoom in UI element sizes
+    const uiScale = 1 / zoom.current;
+    
     // Starting position circle (where projectile will spawn)
     ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
     ctx.beginPath();
-    ctx.arc(start.x, start.y, 8, 0, Math.PI * 2);
+    ctx.arc(start.x, start.y, 8 * uiScale, 0, Math.PI * 2);
     ctx.fill();
     
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2 * uiScale;
     ctx.beginPath();
-    ctx.arc(start.x, start.y, 8, 0, Math.PI * 2);
+    ctx.arc(start.x, start.y, 8 * uiScale, 0, Math.PI * 2);
     ctx.stroke();
     
     // Launch direction line with gradient
@@ -397,8 +475,8 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
     gradient.addColorStop(1, 'rgba(147, 51, 234, 0.8)');
     
     ctx.strokeStyle = gradient;
-    ctx.lineWidth = 3;
-    ctx.setLineDash([5, 5]);
+    ctx.lineWidth = 3 * uiScale;
+    ctx.setLineDash([5 * uiScale, 5 * uiScale]);
     ctx.beginPath();
     ctx.moveTo(start.x, start.y);
     ctx.lineTo(end.x, end.y);
@@ -407,7 +485,7 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
 
     // Arrow head (direction indicator)
     const angle = Math.atan2(dy, dx);
-    const arrowLength = 20;
+    const arrowLength = 20 * uiScale;
     ctx.fillStyle = 'rgba(147, 51, 234, 0.9)';
     ctx.beginPath();
     ctx.moveTo(end.x, end.y);
@@ -422,8 +500,12 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
     ctx.closePath();
     ctx.fill();
     
-    // Power and outcome indicator text
+    // Power and outcome indicator text (compensate for zoom)
     const powerPercent = Math.min(100, (distance / 3)).toFixed(0);
+    ctx.save();
+    ctx.translate((start.x + end.x) / 2, (start.y + end.y) / 2 - 15 * uiScale);
+    ctx.scale(uiScale, uiScale);
+    
     ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
@@ -439,12 +521,14 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
       outcomeText += ` ${outcomeEmoji[prediction.outcome] || ''} ${prediction.outcome.toUpperCase()}`;
     }
     
-    ctx.fillText(outcomeText, (start.x + end.x) / 2, (start.y + end.y) / 2 - 15);
+    ctx.fillText(outcomeText, 0, 0);
+    ctx.restore();
   };
 
   const drawOrbitGuides = (ctx, x, y) => {
+    const uiScale = 1 / zoom.current;
     ctx.strokeStyle = 'rgba(74, 95, 193, 0.15)';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1 * uiScale;
     
     // Draw concentric circles as orbit guides
     [100, 150, 200, 250].forEach(radius => {
@@ -455,31 +539,76 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
   };
 
   const handleMouseDown = (e) => {
-    if (isRunning) return;
     const rect = canvasRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    launchStart.current = { x, y };
-    mousePos.current = { x, y };
+    // Scale mouse coordinates from display size to canvas size
+    const scaleX = WIDTH / rect.width;
+    const scaleY = HEIGHT / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+
+    // Right-click or middle mouse button for panning
+    if (e.button === 2 || e.button === 1 || e.shiftKey) {
+      e.preventDefault();
+      isPanning.current = true;
+      lastPanPos.current = { x, y };
+      console.log('🖐️ Starting pan');
+      return;
+    }
+
+    // Left-click for launching (only when not running)
+    if (isRunning) return;
+    
+    // Convert screen coordinates to world coordinates
+    const worldPos = screenToWorld(x, y);
+    launchStart.current = worldPos;
+    mousePos.current = worldPos;
     cachedPrediction.current = null; // Clear cached prediction
     lastPredictionTime.current = 0; // Reset throttle timer
     isDraggingRef.current = true;
     setIsDragging(true);
-    console.log('🎯 Mouse down - starting drag', { x, y });
+    console.log('🎯 Mouse down - starting drag', { 
+      screen: { x, y }, 
+      world: worldPos, 
+      zoom: zoom.current, 
+      cameraOffset: cameraOffset.current 
+    });
   };
 
   const handleMouseMove = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    // Scale mouse coordinates from display size to canvas size
+    const scaleX = WIDTH / rect.width;
+    const scaleY = HEIGHT / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+
+    // Handle panning
+    if (isPanning.current && lastPanPos.current) {
+      const dx = x - lastPanPos.current.x;
+      const dy = y - lastPanPos.current.y;
+      cameraOffset.current.x += dx;
+      cameraOffset.current.y += dy;
+      lastPanPos.current = { x, y };
+      return;
+    }
+
+    // Handle launch preview dragging
     if (!isDraggingRef.current) return;
     
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    // Always update mouse position (render loop will pick it up)
-    mousePos.current = { x, y };
+    // Convert screen coordinates to world coordinates
+    const worldPos = screenToWorld(x, y);
+    mousePos.current = worldPos;
   };
 
   const handleMouseUp = (e) => {
+    // Stop panning
+    if (isPanning.current) {
+      isPanning.current = false;
+      lastPanPos.current = null;
+      console.log('🖐️ Pan stopped');
+      return;
+    }
+
     if (!isDraggingRef.current || !launchStart.current || !mousePos.current) return;
     
     // Calculate launch parameters from drag
@@ -525,8 +654,81 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
     console.log('🏁 Mouse up - drag ended');
   };
 
+  const handleWheel = (e) => {
+    e.preventDefault();
+    const rect = canvasRef.current.getBoundingClientRect();
+    // Scale mouse coordinates from display size to canvas size
+    const scaleX = WIDTH / rect.width;
+    const scaleY = HEIGHT / rect.height;
+    const mouseX = (e.clientX - rect.left) * scaleX;
+    const mouseY = (e.clientY - rect.top) * scaleY;
+
+    // Get world position before zoom
+    const worldBeforeZoom = screenToWorld(mouseX, mouseY);
+
+    // Zoom in or out
+    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+    const newZoom = Math.max(0.1, Math.min(5, zoom.current * zoomFactor));
+    zoom.current = newZoom;
+    setZoomLevel(newZoom);
+
+    // Get world position after zoom
+    const worldAfterZoom = screenToWorld(mouseX, mouseY);
+
+    // Adjust camera offset to keep mouse position stable
+    cameraOffset.current.x += (worldAfterZoom.x - worldBeforeZoom.x) * zoom.current;
+    cameraOffset.current.y += (worldAfterZoom.y - worldBeforeZoom.y) * zoom.current;
+
+    console.log('🔍 Zoom:', { level: newZoom.toFixed(2), percent: (newZoom * 100).toFixed(0) + '%' });
+  };
+
+  const handleZoomIn = () => {
+    zoom.current = Math.min(5, zoom.current * 1.2);
+    setZoomLevel(zoom.current);
+  };
+
+  const handleZoomOut = () => {
+    zoom.current = Math.max(0.1, zoom.current / 1.2);
+    setZoomLevel(zoom.current);
+  };
+
+  const handleResetView = () => {
+    zoom.current = 1;
+    cameraOffset.current = { x: 0, y: 0 };
+    setZoomLevel(1);
+    console.log('🎯 View reset');
+  };
+
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center relative">
+      {/* Zoom Controls */}
+      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 bg-space-dark/80 backdrop-blur-sm p-3 rounded-lg border border-space-light/30">
+        <button
+          onClick={handleZoomIn}
+          className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded transition-colors font-bold text-lg"
+          title="Zoom In"
+        >
+          +
+        </button>
+        <div className="text-center text-sm text-gray-300 font-mono">
+          {(zoomLevel * 100).toFixed(0)}%
+        </div>
+        <button
+          onClick={handleZoomOut}
+          className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded transition-colors font-bold text-lg"
+          title="Zoom Out"
+        >
+          −
+        </button>
+        <button
+          onClick={handleResetView}
+          className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors text-xs"
+          title="Reset View"
+        >
+          🎯 Reset
+        </button>
+      </div>
+
       <canvas
         ref={canvasRef}
         width={WIDTH}
@@ -534,6 +736,8 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onWheel={handleWheel}
+        onContextMenu={(e) => e.preventDefault()}
         className="bg-space-dark rounded-xl border-2 border-space-light/30 shadow-2xl cursor-crosshair"
         style={{ maxWidth: '100%', height: 'auto' }}
       />
@@ -543,7 +747,11 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
         ) : isDragging ? (
           <span className="text-purple-400">🎯 Release to launch projectile!</span>
         ) : (
-          <span>🖱️ Click and drag to set position and launch direction</span>
+          <div className="space-y-1">
+            <div>🖱️ <strong>Left-click + drag</strong> to aim and launch</div>
+            <div>🖱️ <strong>Right-click + drag</strong> or <strong>Shift + drag</strong> to pan</div>
+            <div>🔍 <strong>Mouse wheel</strong> to zoom</div>
+          </div>
         )}
       </div>
     </div>
