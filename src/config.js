@@ -47,6 +47,48 @@ export const CONFIG = {
     starCount: 100,
   },
 
+  // Trajectory Prediction Settings
+  prediction: {
+    // Maximum steps for prediction simulation
+    maxSteps: 300,
+    
+    // Time step for prediction (should match physics.timeStep)
+    timeStep: 0.1,
+    
+    // Maximum time to predict (seconds)
+    maxTime: 10,
+    
+    // Sampling rate (store every Nth point for performance)
+    samplingRate: 3,
+    
+    // Visual style for predicted trajectory
+    visual: {
+      // Line style
+      lineWidth: 2,
+      lineDash: [5, 5], // Dashed line pattern
+      
+      // Dot style
+      dotRadius: 2,
+      dotSpacing: 15, // Draw dot every 15 pixels
+      
+      // Colors by outcome
+      colors: {
+        crash: 'rgba(239, 68, 68, 0.6)',    // Red - will crash
+        orbit: 'rgba(34, 197, 94, 0.6)',    // Green - will orbit
+        escape: 'rgba(59, 130, 246, 0.6)',  // Blue - will escape
+        unknown: 'rgba(156, 163, 175, 0.5)' // Gray - uncertain
+      },
+      
+      // Glow effect
+      glowEnabled: true,
+      glowBlur: 5,
+    },
+    
+    // Performance optimization
+    enableDuringDrag: true, // Show prediction while dragging
+    throttleMs: 50,         // Update prediction every 50ms max
+  },
+
   // Simulation Settings
   simulation: {
     // Maximum simulation time (milliseconds)

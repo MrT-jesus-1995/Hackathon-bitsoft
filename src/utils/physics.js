@@ -337,6 +337,131 @@ export class PhysicsEngine {
     // v_orbital = sqrt(G * M / r)
     return Math.sqrt((this.G * this.planetMass) / distance);
   }
+
+  /**
+   * Predict trajectory path for preview
+   * Simulates the projectile flight without affecting actual simulation state
+   * Returns array of points and predicted outcome
+   */
+  predictTrajectory(startPos, velocity, options = {}) {
+    const {
+      maxSteps = 300,        // Maximum simulation steps
+      timeStep = 0.1,        // Time step for prediction
+      maxTime = 10,          // Maximum simulation time in seconds
+      samplingRate = 3       // Only store every Nth point for performance
+    } = options;
+
+    const predictions = [];
+    const maxIterations = Math.min(maxSteps, Math.floor(maxTime / timeStep));
+    
+    // Create temporary projectile state for prediction
+    let pos = startPos.copy();
+    let vel = velocity.copy();
+    let outcome = null;
+    let step = 0;
+    
+    // Store initial position
+    predictions.push({
+      pos: pos.copy(),
+      vel: vel.copy(),
+      step: 0
+    });
+
+    // Simulate trajectory
+    for (let i = 0; i < maxIterations && !outcome; i++) {
+      step++;
+      
+      // Calculate gravitational force from all planets
+      let totalForce = new Vector2D(0, 0);
+      
+      for (const planet of this.planets) {
+        const direction = planet.pos.sub(pos);
+        const distance = direction.mag();
+        
+        // Check for collision
+        if (distance <= planet.radius) {
+          outcome = 'crash';
+          break;
+        }
+        
+        // Prevent division by zero
+        const minDistance = planet.radius;
+        const clampedDistance = Math.max(distance, minDistance);
+        
+        // F = G * (m1 * m2) / r^2
+        const forceMagnitude = (this.G * planet.mass * this.projectile.mass) / 
+                               (clampedDistance * clampedDistance);
+        
+        const force = direction.normalize().mult(forceMagnitude);
+        totalForce = totalForce.add(force);
+      }
+      
+      if (outcome === 'crash') break;
+      
+      // F = ma, so a = F/m
+      const acc = totalForce.div(this.projectile.mass);
+      
+      // Update velocity and position (Euler integration)
+      vel = vel.add(acc.mult(timeStep));
+      pos = pos.add(vel.mult(timeStep));
+      
+      // Sample points for performance (only store every Nth point)
+      if (i % samplingRate === 0) {
+        predictions.push({
+          pos: pos.copy(),
+          vel: vel.copy(),
+          step: step
+        });
+      }
+      
+      // Check for escape
+      let isNearAnyPlanet = false;
+      const escapeDistance = 1000;
+      
+      for (const planet of this.planets) {
+        const distance = pos.sub(planet.pos).mag();
+        if (distance < escapeDistance) {
+          isNearAnyPlanet = true;
+          break;
+        }
+      }
+      
+      if (!isNearAnyPlanet) {
+        outcome = 'escape';
+        break;
+      }
+      
+      // Check for potential orbit (simplified check for preview)
+      if (predictions.length > 50) {
+        for (const planet of this.planets) {
+          const recentDistances = predictions.slice(-20).map(p => 
+            p.pos.sub(planet.pos).mag()
+          );
+          
+          const avgDistance = recentDistances.reduce((a, b) => a + b, 0) / recentDistances.length;
+          const variance = recentDistances.reduce((sum, d) => sum + Math.pow(d - avgDistance, 2), 0) / recentDistances.length;
+          
+          if (variance < 150 && avgDistance > planet.radius * 2) {
+            outcome = 'orbit';
+            break;
+          }
+        }
+      }
+    }
+
+    // If no outcome determined within steps, mark as unknown
+    if (!outcome && step >= maxIterations) {
+      outcome = 'unknown';
+    }
+
+    return {
+      points: predictions.map(p => p.pos),
+      outcome: outcome,
+      stepCount: step,
+      finalVelocity: vel,
+      finalPosition: pos
+    };
+  }
 }
 
 export default PhysicsEngine;

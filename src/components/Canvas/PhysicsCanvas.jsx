@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { PhysicsEngine, Vector2D } from '../../utils/physics';
 import { degreesToRadians } from '../../utils/helpers';
-import CONFIG from '../../config';
+import { CONFIG } from '../../config';
 
 const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRunning, onLaunchFromCanvas }) => {
   const canvasRef = useRef(null);
@@ -12,7 +12,10 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
   const lastLaunchData = useRef(null); // Store mouse launch data
   const mousePos = useRef(null); // Use ref for immediate updates
   const launchStart = useRef(null); // Use ref for immediate updates
-  const [isDragging, setIsDragging] = useState(false);
+  const lastPredictionTime = useRef(0); // For throttling predictions
+  const cachedPrediction = useRef(null); // Cache last prediction for performance
+  const isDraggingRef = useRef(false); // Use ref for immediate updates in render loop
+  const [isDragging, setIsDragging] = useState(false); // State for UI updates only
 
   const WIDTH = 800;
   const HEIGHT = 600;
@@ -199,7 +202,7 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
     }
 
     // Draw launch preview when dragging
-    if (isDragging && launchStart.current && mousePos.current) {
+    if (isDraggingRef.current && launchStart.current && mousePos.current) {
       drawLaunchPreview(ctx, launchStart.current, mousePos.current);
     }
 
@@ -306,9 +309,76 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
   };
 
   const drawLaunchPreview = (ctx, start, end) => {
+    console.log('🎨 Drawing launch preview', { start, end, isDragging: isDraggingRef.current });
     const dx = end.x - start.x;
     const dy = end.y - start.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    // Calculate velocity from drag distance and direction
+    const power = params.launchPower || 5;
+    const velocityX = (dx / 30) * power;
+    const velocityY = (dy / 30) * power;
+    const startPos = new Vector2D(start.x, start.y);
+    const velocity = new Vector2D(velocityX, velocityY);
+    
+    // Get trajectory prediction from physics engine (with throttling)
+    const engine = engineRef.current;
+    let prediction = cachedPrediction.current; // Use cached prediction by default
+    
+    if (engine && CONFIG.prediction.enableDuringDrag) {
+      const now = Date.now();
+      const timeSinceLastPrediction = now - lastPredictionTime.current;
+      
+      // Only calculate new prediction if enough time has passed
+      if (!prediction || timeSinceLastPrediction >= CONFIG.prediction.throttleMs) {
+        console.log('🔮 Calculating trajectory prediction...', { velocity, startPos });
+        prediction = engine.predictTrajectory(startPos, velocity, {
+          maxSteps: CONFIG.prediction.maxSteps,
+          timeStep: CONFIG.prediction.timeStep,
+          maxTime: CONFIG.prediction.maxTime,
+          samplingRate: CONFIG.prediction.samplingRate
+        });
+        console.log('✅ Prediction result:', prediction);
+        cachedPrediction.current = prediction; // Cache the prediction
+        lastPredictionTime.current = now;
+      }
+    }
+    
+    // Draw predicted trajectory if available
+    if (prediction && prediction.points.length > 1) {
+      const outcomeColor = CONFIG.prediction.visual.colors[prediction.outcome] || 
+                          CONFIG.prediction.visual.colors.unknown;
+      
+      // Draw glow effect if enabled
+      if (CONFIG.prediction.visual.glowEnabled) {
+        ctx.save();
+        ctx.shadowColor = outcomeColor;
+        ctx.shadowBlur = CONFIG.prediction.visual.glowBlur;
+        
+        // Draw trajectory path as dashed line
+        ctx.strokeStyle = outcomeColor;
+        ctx.lineWidth = CONFIG.prediction.visual.lineWidth;
+        ctx.setLineDash(CONFIG.prediction.visual.lineDash);
+        ctx.beginPath();
+        ctx.moveTo(prediction.points[0].x, prediction.points[0].y);
+        
+        for (let i = 1; i < prediction.points.length; i++) {
+          ctx.lineTo(prediction.points[i].x, prediction.points[i].y);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+      
+      // Draw dots along trajectory for better visibility
+      ctx.fillStyle = outcomeColor;
+      for (let i = 0; i < prediction.points.length; i += Math.floor(CONFIG.prediction.visual.dotSpacing / 5)) {
+        const point = prediction.points[i];
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, CONFIG.prediction.visual.dotRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
     
     // Starting position circle (where projectile will spawn)
     ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
@@ -353,13 +423,24 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
     ctx.closePath();
     ctx.fill();
     
-    // Power indicator text
-    const power = Math.min(100, (distance / 3)).toFixed(0);
+    // Power and outcome indicator text
+    const powerPercent = Math.min(100, (distance / 3)).toFixed(0);
     ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`Power: ${power}%`, (start.x + end.x) / 2, (start.y + end.y) / 2 - 15);
+    
+    let outcomeText = `Power: ${powerPercent}%`;
+    if (prediction && prediction.outcome !== 'unknown') {
+      const outcomeEmoji = {
+        crash: '💥',
+        orbit: '🌟',
+        escape: '🚀'
+      };
+      outcomeText += ` ${outcomeEmoji[prediction.outcome] || ''} ${prediction.outcome.toUpperCase()}`;
+    }
+    
+    ctx.fillText(outcomeText, (start.x + end.x) / 2, (start.y + end.y) / 2 - 15);
   };
 
   const drawOrbitGuides = (ctx, x, y) => {
@@ -381,18 +462,26 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
     const y = e.clientY - rect.top;
     launchStart.current = { x, y };
     mousePos.current = { x, y };
+    cachedPrediction.current = null; // Clear cached prediction
+    lastPredictionTime.current = 0; // Reset throttle timer
+    isDraggingRef.current = true;
     setIsDragging(true);
+    console.log('🎯 Mouse down - starting drag', { x, y });
   };
 
   const handleMouseMove = (e) => {
+    if (!isDraggingRef.current) return;
+    
     const rect = canvasRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+    
+    // Always update mouse position (render loop will pick it up)
     mousePos.current = { x, y };
   };
 
   const handleMouseUp = (e) => {
-    if (!isDragging || !launchStart.current || !mousePos.current) return;
+    if (!isDraggingRef.current || !launchStart.current || !mousePos.current) return;
     
     // Calculate launch parameters from drag
     const dx = mousePos.current.x - launchStart.current.x;
@@ -430,7 +519,11 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
       }
     }
     
+    // Clear cached prediction when dragging stops
+    cachedPrediction.current = null;
+    isDraggingRef.current = false;
     setIsDragging(false);
+    console.log('🏁 Mouse up - drag ended');
   };
 
   return (
