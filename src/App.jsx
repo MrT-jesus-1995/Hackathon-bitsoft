@@ -36,6 +36,11 @@ function App() {
     setSimulationState(prev => ({ ...prev, isRunning: true, trajectory: [] }));
   };
 
+  const handleLaunchFromCanvas = (position, velocity) => {
+    // Launch triggered from canvas drag - just start the simulation
+    setSimulationState(prev => ({ ...prev, isRunning: true, trajectory: [] }));
+  };
+
   const handleReset = () => {
     setSimulationState({
       isRunning: false,
@@ -101,6 +106,7 @@ function App() {
                   setSimulationState(prev => ({ ...prev, trajectory }))
                 }
                 isRunning={simulationState.isRunning}
+                onLaunchFromCanvas={handleLaunchFromCanvas}
               />
             </div>
           </div>

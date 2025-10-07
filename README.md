@@ -17,6 +17,7 @@
 
 ## 📚 Additional Documentation
 
+- **[MOUSE-LAUNCH.md](MOUSE-LAUNCH.md)** - Interactive mouse-based launch system guide
 - **[MULTIPLE-PLANETS.md](MULTIPLE-PLANETS.md)** - Complete guide to multi-planet physics scenarios
 - **[AI-TIMING.md](AI-TIMING.md)** - AI response timeout and typing animation configuration
 - **[SIMULATION-TIME-LIMITS.md](SIMULATION-TIME-LIMITS.md)** - Configurable simulation duration limits
@@ -70,10 +71,11 @@ Before you begin, ensure you have the following installed:
 
 ### Quick Start Guide
 
-1. **Launch an asteroid** - Click and drag on the canvas to set direction and speed
-2. **Adjust parameters** - Use sliders to modify gravity strength and launch power
-3. **Observe the simulation** - Watch the trajectory in real-time
-4. **Learn with AI** - Click "Explain This" to get AI-powered physics explanations
+1. **Launch a projectile** - 🖱️ Click and drag anywhere on the canvas to set position, direction, and velocity
+2. **Adjust parameters** - Use sliders to modify gravity strength and launch power multiplier
+3. **Try multiple planets** - Select from 5 pre-configured scenarios or create your own
+4. **Observe the simulation** - Watch the trajectory interact with combined gravity fields
+5. **Learn with AI** - Click "Explain This" to get AI-powered physics explanations
 
 ---
 

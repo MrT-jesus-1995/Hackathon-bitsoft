@@ -62,29 +62,6 @@ const SimulationControls = ({ params, onParamChange, disabled }) => {
           </div>
         </div>
 
-        {/* Angle Control */}
-        <div>
-          <label className="flex items-center justify-between text-sm font-medium text-gray-300 mb-2">
-            <span>Launch Angle</span>
-            <span className="text-purple-400 font-mono">{params.angle}°</span>
-          </label>
-          <input
-            type="range"
-            min="0"
-            max="360"
-            step="5"
-            value={params.angle}
-            onChange={(e) => onParamChange('angle', parseInt(e.target.value))}
-            disabled={disabled}
-            className="w-full h-2 bg-space-light rounded-lg appearance-none cursor-pointer slider"
-          />
-          <div className="flex justify-between text-xs text-gray-500 mt-1">
-            <span>0°</span>
-            <span>180°</span>
-            <span>360°</span>
-          </div>
-        </div>
-
         {/* Max Simulation Time Control */}
         <div>
           <label className="flex items-center justify-between text-sm font-medium text-gray-300 mb-2">

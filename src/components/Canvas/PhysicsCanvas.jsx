@@ -3,14 +3,15 @@ import { PhysicsEngine, Vector2D } from '../../utils/physics';
 import { degreesToRadians } from '../../utils/helpers';
 import CONFIG from '../../config';
 
-const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRunning }) => {
+const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRunning, onLaunchFromCanvas }) => {
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
   const animationRef = useRef(null);
   const simulationStartTime = useRef(null);
   const updateCount = useRef(0);
-  const [mousePos, setMousePos] = useState(null);
-  const [launchStart, setLaunchStart] = useState(null);
+  const lastLaunchData = useRef(null); // Store mouse launch data
+  const mousePos = useRef(null); // Use ref for immediate updates
+  const launchStart = useRef(null); // Use ref for immediate updates
   const [isDragging, setIsDragging] = useState(false);
 
   const WIDTH = 800;
@@ -78,25 +79,43 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
   // Handle simulation running state
   useEffect(() => {
     if (isRunning && engineRef.current) {
-      const launchAngle = degreesToRadians(params.angle);
-      const launchSpeed = params.launchPower * 2;
+      // Use mouse launch data if available, otherwise fallback to angle-based
+      if (lastLaunchData.current) {
+        console.log('✅ Using mouse launch data:', lastLaunchData.current);
+        engineRef.current.launch(lastLaunchData.current.position, lastLaunchData.current.velocity);
+      } else {
+        console.log('⚠️ Using fallback angle-based launch');
+        // Fallback to angle-based launch (for Launch button)
+        const launchAngle = degreesToRadians(params.angle || 45);
+        const launchSpeed = params.launchPower * 2;
+        
+        // Calculate launch position (offset from first planet)
+        const startDistance = 150;
+        const firstPlanet = engineRef.current.planets[0];
+        const planetX = firstPlanet.pos.x;
+        const planetY = firstPlanet.pos.y;
+        
+        const startX = planetX + Math.cos(launchAngle) * startDistance;
+        const startY = planetY + Math.sin(launchAngle) * startDistance;
+        const startPos = new Vector2D(startX, startY);
+        
+        // Calculate velocity perpendicular to radius for better orbits
+        const velAngle = launchAngle + Math.PI / 2;
+        const velocity = new Vector2D(
+          Math.cos(velAngle) * launchSpeed,
+          Math.sin(velAngle) * launchSpeed
+        );
+        
+        engineRef.current.launch(startPos, velocity);
+      }
       
-      // Calculate launch position (offset from planet)
-      const startDistance = 150;
-      const startX = WIDTH / 2 + Math.cos(launchAngle) * startDistance;
-      const startY = HEIGHT / 2 + Math.sin(launchAngle) * startDistance;
-      const startPos = new Vector2D(startX, startY);
-      
-      // Calculate velocity perpendicular to radius for better orbits
-      const velAngle = launchAngle + Math.PI / 2;
-      const velocity = new Vector2D(
-        Math.cos(velAngle) * launchSpeed,
-        Math.sin(velAngle) * launchSpeed
-      );
-      
-      engineRef.current.launch(startPos, velocity);
       simulationStartTime.current = Date.now();
       updateCount.current = 0;
+    }
+    
+    // Clear launch data after use
+    if (!isRunning) {
+      lastLaunchData.current = null;
     }
   }, [isRunning, params]);
 
@@ -180,8 +199,8 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
     }
 
     // Draw launch preview when dragging
-    if (isDragging && launchStart && mousePos) {
-      drawLaunchPreview(ctx, launchStart, mousePos);
+    if (isDragging && launchStart.current && mousePos.current) {
+      drawLaunchPreview(ctx, launchStart.current, mousePos.current);
     }
 
     // Draw orbit guides for all planets
@@ -287,8 +306,29 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
   };
 
   const drawLaunchPreview = (ctx, start, end) => {
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    // Starting position circle (where projectile will spawn)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.beginPath();
+    ctx.arc(start.x, start.y, 8, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
     ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(start.x, start.y, 8, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Launch direction line with gradient
+    const gradient = ctx.createLinearGradient(start.x, start.y, end.x, end.y);
+    gradient.addColorStop(0, 'rgba(74, 95, 193, 0.8)');
+    gradient.addColorStop(1, 'rgba(147, 51, 234, 0.8)');
+    
+    ctx.strokeStyle = gradient;
+    ctx.lineWidth = 3;
     ctx.setLineDash([5, 5]);
     ctx.beginPath();
     ctx.moveTo(start.x, start.y);
@@ -296,10 +336,10 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Arrow head
-    const angle = Math.atan2(end.y - start.y, end.x - start.x);
-    const arrowLength = 15;
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    // Arrow head (direction indicator)
+    const angle = Math.atan2(dy, dx);
+    const arrowLength = 20;
+    ctx.fillStyle = 'rgba(147, 51, 234, 0.9)';
     ctx.beginPath();
     ctx.moveTo(end.x, end.y);
     ctx.lineTo(
@@ -312,6 +352,14 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
     );
     ctx.closePath();
     ctx.fill();
+    
+    // Power indicator text
+    const power = Math.min(100, (distance / 3)).toFixed(0);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`Power: ${power}%`, (start.x + end.x) / 2, (start.y + end.y) / 2 - 15);
   };
 
   const drawOrbitGuides = (ctx, x, y) => {
@@ -331,7 +379,8 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
     const rect = canvasRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    setLaunchStart({ x, y });
+    launchStart.current = { x, y };
+    mousePos.current = { x, y };
     setIsDragging(true);
   };
 
@@ -339,16 +388,49 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
     const rect = canvasRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    setMousePos({ x, y });
+    mousePos.current = { x, y };
   };
 
   const handleMouseUp = (e) => {
-    if (!isDragging || !launchStart || !mousePos) return;
+    if (!isDragging || !launchStart.current || !mousePos.current) return;
     
     // Calculate launch parameters from drag
-    // This is just for visual feedback - actual launch uses params
+    const dx = mousePos.current.x - launchStart.current.x;
+    const dy = mousePos.current.y - launchStart.current.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    // Only launch if drag is significant
+    if (distance > 10) {
+      // Calculate velocity from drag direction and length
+      const velocityScale = params.launchPower / 50; // Scale by launch power
+      const velocity = new Vector2D(dx * velocityScale, dy * velocityScale);
+      
+      // Launch from the drag start position
+      const startPos = new Vector2D(launchStart.current.x, launchStart.current.y);
+      
+      console.log('🚀 Mouse Launch:', {
+        startPos: { x: startPos.x, y: startPos.y },
+        velocity: { x: velocity.x, y: velocity.y },
+        dragDistance: distance,
+        powerMultiplier: params.launchPower
+      });
+      
+      // Store launch data for when simulation starts
+      lastLaunchData.current = {
+        position: startPos,
+        velocity: velocity
+      };
+      
+      // Reset trajectory and trigger the simulation to start
+      onTrajectoryUpdate([]);
+      
+      // Trigger the parent's launch handler to start the simulation
+      if (onLaunchFromCanvas) {
+        onLaunchFromCanvas(startPos, velocity);
+      }
+    }
+    
     setIsDragging(false);
-    setLaunchStart(null);
   };
 
   return (
@@ -366,8 +448,10 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
       <div className="mt-4 text-center text-sm text-gray-400">
         {isRunning ? (
           <span className="text-yellow-400">🚀 Simulation running...</span>
+        ) : isDragging ? (
+          <span className="text-purple-400">🎯 Release to launch projectile!</span>
         ) : (
-          <span>⚙️ Adjust settings and click Launch to start</span>
+          <span>🖱️ Click and drag to set position and launch direction</span>
         )}
       </div>
     </div>

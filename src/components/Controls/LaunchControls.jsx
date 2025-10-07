@@ -64,12 +64,12 @@ const LaunchControls = ({ onLaunch, onReset, isRunning, params }) => {
 
         {/* Info Box */}
         <div className="mt-4 p-4 bg-space-dark/50 rounded-lg border border-space-light/10">
-          <h3 className="text-sm font-semibold text-gray-400 mb-2">💡 Quick Tips</h3>
+          <h3 className="text-sm font-semibold text-gray-400 mb-2">💡 How to Launch</h3>
           <ul className="text-xs text-gray-500 space-y-1">
-            <li>• Adjust angle and power before launching</li>
-            <li>• Try different gravity strengths</li>
-            <li>• Watch for orbit, escape, or crash</li>
-            <li>• Click AI button for explanations</li>
+            <li>• 🖱️ <strong>Click & Drag</strong> on canvas to set position & direction</li>
+            <li>• 📏 Drag length = launch velocity</li>
+            <li>• 🎚️ Use Launch Power slider to adjust strength</li>
+            <li>• 🎯 Try launching from different positions!</li>
           </ul>
         </div>
 
@@ -83,11 +83,7 @@ const LaunchControls = ({ onLaunch, onReset, isRunning, params }) => {
             </div>
             <div className="bg-space-dark/30 p-2 rounded">
               <span className="text-gray-400">Power:</span>
-              <span className="ml-2 text-green-400 font-mono">{params.launchPower.toFixed(1)}</span>
-            </div>
-            <div className="bg-space-dark/30 p-2 rounded col-span-2">
-              <span className="text-gray-400">Angle:</span>
-              <span className="ml-2 text-purple-400 font-mono">{params.angle}°</span>
+              <span className="ml-2 text-green-400 font-mono">{params.launchPower.toFixed(1)}x</span>
             </div>
           </div>
         </div>
