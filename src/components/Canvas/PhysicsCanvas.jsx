@@ -315,11 +315,10 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
     const distance = Math.sqrt(dx * dx + dy * dy);
     
     // Calculate velocity from drag distance and direction
-    const power = params.launchPower || 5;
-    const velocityX = (dx / 30) * power;
-    const velocityY = (dy / 30) * power;
+    // MUST match the calculation in handleMouseUp!
+    const velocityScale = params.launchPower / 50; // Same as launch
     const startPos = new Vector2D(start.x, start.y);
-    const velocity = new Vector2D(velocityX, velocityY);
+    const velocity = new Vector2D(dx * velocityScale, dy * velocityScale);
     
     // Get trajectory prediction from physics engine (with throttling)
     const engine = engineRef.current;
