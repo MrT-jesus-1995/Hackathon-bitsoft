@@ -15,6 +15,15 @@
 - [Development Roadmap](#-build-feasibility-solo--2-days)
 - [Contributing](#-contributing)
 
+## 📚 Additional Documentation
+
+- **[MOUSE-LAUNCH.md](MOUSE-LAUNCH.md)** - Interactive mouse-based launch system guide
+- **[MULTIPLE-PLANETS.md](MULTIPLE-PLANETS.md)** - Complete guide to multi-planet physics scenarios
+- **[AI-TIMING.md](AI-TIMING.md)** - AI response timeout and typing animation configuration
+- **[SIMULATION-TIME-LIMITS.md](SIMULATION-TIME-LIMITS.md)** - Configurable simulation duration limits
+- **[SETUP.md](SETUP.md)** - Detailed setup instructions
+- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Development guidelines and architecture
+
 ---
 
 ## 🚀 Getting Started
@@ -62,10 +71,11 @@ Before you begin, ensure you have the following installed:
 
 ### Quick Start Guide
 
-1. **Launch an asteroid** - Click and drag on the canvas to set direction and speed
-2. **Adjust parameters** - Use sliders to modify gravity strength and launch power
-3. **Observe the simulation** - Watch the trajectory in real-time
-4. **Learn with AI** - Click "Explain This" to get AI-powered physics explanations
+1. **Launch a projectile** - 🖱️ Click and drag anywhere on the canvas to set position, direction, and velocity
+2. **Adjust parameters** - Use sliders to modify gravity strength and launch power multiplier
+3. **Try multiple planets** - Select from 5 pre-configured scenarios or create your own
+4. **Observe the simulation** - Watch the trajectory interact with combined gravity fields
+5. **Learn with AI** - Click "Explain This" to get AI-powered physics explanations
 
 ---
 
@@ -184,8 +194,17 @@ The AI explains what’s happening — teaching real orbital mechanics concepts 
 
 * Central planet exerts a gravitational force proportional to `1 / r²`.
 * Adjustable **gravity strength (G)** for easy experimentation.
+* **NEW:** Multiple planets with combined gravity fields! See [MULTIPLE-PLANETS.md](MULTIPLE-PLANETS.md) for details.
 
-### 3. ✨ **Orbit & Slingshot Visualization**
+### 3. 🌍 **Multiple Planets** *(NEW!)*
+
+* Add/remove planets dynamically (1-6 planets)
+* Edit planet properties: position, mass, radius, color, name
+* Pre-configured scenarios: Binary System, Lagrange Points, Triangle Formation, Solar System
+* Realistic N-body physics with combined gravitational forces
+* See full documentation: [MULTIPLE-PLANETS.md](MULTIPLE-PLANETS.md)
+
+### 4. ✨ **Orbit & Slingshot Visualization**
 
 * Displays **real-time trajectory trails** to visualize orbits and escape paths.
 * Shows different outcomes:
@@ -193,8 +212,9 @@ The AI explains what’s happening — teaching real orbital mechanics concepts 
   * Orbit (stable)
   * Crash (too slow)
   * Escape / Slingshot (too fast)
+  * Timeout (simulation limit reached)
 
-### 4. 💬 **AI Physics Tutor**
+### 5. 💬 **AI Physics Tutor**
 
 * AI analyzes each simulation and explains what happened, e.g.
 
