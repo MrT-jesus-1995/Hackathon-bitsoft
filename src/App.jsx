@@ -3,6 +3,7 @@ import PhysicsCanvas from './components/Canvas/PhysicsCanvas';
 import LaunchControls from './components/Controls/LaunchControls';
 import SimulationControls from './components/Controls/SimulationControls';
 import PlanetControls from './components/Controls/PlanetControls';
+import ChallengeMode from './components/Controls/ChallengeMode';
 import ChatOverlay from './components/AI/ChatOverlay';
 import Dashboard from './components/UI/Dashboard';
 import InfoPanel from './components/UI/InfoPanel';
@@ -31,6 +32,12 @@ function App() {
   const [showAI, setShowAI] = useState(false);
   const [aiContext, setAiContext] = useState(null);
   const [lastLaunch, setLastLaunch] = useState(null);
+  const [currentChallenge, setCurrentChallenge] = useState(null);
+  const [challengeProgress, setChallengeProgress] = useState({
+    score: 0,
+    timeInZone: 0,
+    startTime: null,
+  });
 
   const handleLaunch = (angle, power) => {
     setSimulationParams(prev => ({ ...prev, angle, launchPower: power }));
@@ -48,6 +55,26 @@ function App() {
     if (lastLaunch && !simulationState.isRunning) {
       // Trigger a relaunch with the same parameters
       setSimulationState(prev => ({ ...prev, isRunning: true, trajectory: [] }));
+    }
+  };
+
+  const handleChallengeSelect = (challenge) => {
+    if (challenge) {
+      setCurrentChallenge(challenge);
+      // Load the challenge's planet scenario
+      const scenarioName = challenge.planets;
+      const scenarioPlanets = CONFIG.planets.scenarios[scenarioName]?.planets || CONFIG.planets.scenarios.single.planets;
+      handlePlanetsChange(scenarioPlanets);
+      // Reset progress
+      setChallengeProgress({
+        score: 0,
+        timeInZone: 0,
+        startTime: Date.now(),
+      });
+      handleReset();
+    } else {
+      setCurrentChallenge(null);
+      setChallengeProgress({ score: 0, timeInZone: 0, startTime: null });
     }
   };
 
@@ -145,6 +172,12 @@ function App() {
                 ✕
               </button>
             </div>
+
+            {/* Challenge Mode */}
+            <ChallengeMode
+              onChallengeSelect={handleChallengeSelect}
+              currentChallenge={currentChallenge}
+            />
 
             {/* Info Panel */}
             <InfoPanel 

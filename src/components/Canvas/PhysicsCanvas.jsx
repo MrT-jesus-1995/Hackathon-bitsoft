@@ -538,6 +538,46 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
     });
   };
 
+  const drawTargetRings = (ctx, x, y, showTargets) => {
+    if (!showTargets) return;
+    
+    const uiScale = 1 / zoom.current;
+    const zones = CONFIG.targetRings?.zones;
+    
+    if (!zones || zones.length === 0) return;
+    
+    // Draw zones from outside to inside for proper layering
+    zones.slice().reverse().forEach((zone, index) => {
+      
+      // Draw filled ring
+      ctx.save();
+      ctx.fillStyle = zone.color;
+      ctx.beginPath();
+      ctx.arc(x, y, zone.maxRadius, 0, Math.PI * 2, false);
+      ctx.arc(x, y, zone.minRadius, 0, Math.PI * 2, true);
+      ctx.fill('evenodd');
+      ctx.restore();
+      
+      // Draw outer stroke
+      ctx.save();
+      ctx.strokeStyle = zone.strokeColor;
+      ctx.lineWidth = 2 * uiScale;
+      ctx.beginPath();
+      ctx.arc(x, y, zone.maxRadius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+      
+      // Draw inner stroke
+      ctx.save();
+      ctx.strokeStyle = zone.strokeColor;
+      ctx.lineWidth = 2 * uiScale;
+      ctx.beginPath();
+      ctx.arc(x, y, zone.minRadius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    });
+  };
+
   const handleMouseDown = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     // Scale mouse coordinates from display size to canvas size

@@ -298,6 +298,94 @@ export const CONFIG = {
             name: 'Moon'
           }
         ]
+      },
+      // Challenge-specific planet configurations
+      beginnerOrbit: {
+        name: '🌟 Beginner Orbit',
+        description: 'Perfect for learning orbits',
+        planets: [
+          {
+            id: 'planet',
+            x: 600,
+            y: 400,
+            mass: 1200,
+            radius: 45,
+            color: '#3b82f6',
+            name: 'Training Planet'
+          }
+        ]
+      },
+      perfectShot: {
+        name: '🎯 Perfect Shot Arena',
+        description: 'Designed for precision targeting',
+        planets: [
+          {
+            id: 'target-planet',
+            x: 600,
+            y: 400,
+            mass: 1000,
+            radius: 40,
+            color: '#10b981',
+            name: 'Target'
+          }
+        ]
+      },
+      binaryChallenge: {
+        name: '🔄 Binary System',
+        description: 'Two planets in balance',
+        planets: [
+          {
+            id: 'planet-1',
+            x: 450,
+            y: 400,
+            mass: 900,
+            radius: 42,
+            color: '#8b5cf6',
+            name: 'Alpha'
+          },
+          {
+            id: 'planet-2',
+            x: 750,
+            y: 400,
+            mass: 900,
+            radius: 42,
+            color: '#ec4899',
+            name: 'Beta'
+          }
+        ]
+      },
+      tripleChallenge: {
+        name: '🌠 Triple Threat',
+        description: 'Navigate three planets',
+        planets: [
+          {
+            id: 'planet-1',
+            x: 600,
+            y: 300,
+            mass: 800,
+            radius: 38,
+            color: '#ef4444',
+            name: 'Red Giant'
+          },
+          {
+            id: 'planet-2',
+            x: 450,
+            y: 480,
+            mass: 800,
+            radius: 38,
+            color: '#3b82f6',
+            name: 'Blue Star'
+          },
+          {
+            id: 'planet-3',
+            x: 750,
+            y: 480,
+            mass: 800,
+            radius: 38,
+            color: '#10b981',
+            name: 'Green World'
+          }
+        ]
       }
     },
     
@@ -319,6 +407,136 @@ export const CONFIG = {
       x: { min: 50, max: 750, step: 10 },
       y: { min: 50, max: 550, step: 10 },
     },
+  },
+
+  // Target Rings Settings
+  targetRings: {
+    enabled: false, // Can be toggled on/off
+    zones: [
+      {
+        id: 'perfect',
+        minRadius: 60,
+        maxRadius: 80,
+        color: 'rgba(34, 197, 94, 0.2)', // Green
+        strokeColor: 'rgba(34, 197, 94, 0.7)',
+        points: 100,
+        label: 'Perfect!'
+      },
+      {
+        id: 'great',
+        minRadius: 80,
+        maxRadius: 110,
+        color: 'rgba(59, 130, 246, 0.15)', // Blue
+        strokeColor: 'rgba(59, 130, 246, 0.6)',
+        points: 50,
+        label: 'Great'
+      },
+      {
+        id: 'good',
+        minRadius: 110,
+        maxRadius: 145,
+        color: 'rgba(168, 85, 247, 0.12)', // Purple
+        strokeColor: 'rgba(168, 85, 247, 0.5)',
+        points: 25,
+        label: 'Good'
+      },
+      {
+        id: 'ok',
+        minRadius: 145,
+        maxRadius: 185,
+        color: 'rgba(251, 146, 60, 0.1)', // Orange
+        strokeColor: 'rgba(251, 146, 60, 0.4)',
+        points: 10,
+        label: 'OK'
+      }
+    ],
+    // How long projectile must stay in zone to score (ms)
+    scoreThreshold: 2000, // 2 seconds
+    // Time in zone before counting as "orbit"
+    orbitThreshold: 5000, // 5 seconds
+  },
+
+  // Challenge Mode Settings
+  challenges: {
+    list: [
+      {
+        id: 'beginner-orbit',
+        name: '🌟 First Orbit',
+        difficulty: 'Easy',
+        description: 'Achieve a stable orbit around the planet for 5 seconds',
+        goal: 'orbit',
+        targetScore: 0,
+        timeLimit: null,
+        planets: 'beginnerOrbit', // Use custom challenge map
+        requiredOrbitTime: 5000,
+        hint: 'Launch at medium speed tangent to the planet',
+        reward: '⭐ Basic Orbiter'
+      },
+      {
+        id: 'perfect-shot',
+        name: '🎯 Perfect Shot',
+        difficulty: 'Medium',
+        description: 'Score 100 points by hitting the perfect zone',
+        goal: 'score',
+        targetScore: 100,
+        timeLimit: 60000, // 60 seconds
+        planets: 'perfectShot', // Use custom challenge map
+        requiredOrbitTime: 2000,
+        hint: 'Aim for the green zone closest to the planet',
+        reward: '🏆 Sharpshooter'
+      },
+      {
+        id: 'high-scorer',
+        name: '💯 High Scorer',
+        difficulty: 'Medium',
+        description: 'Score 200 points total across multiple launches',
+        goal: 'score',
+        targetScore: 200,
+        timeLimit: 120000, // 2 minutes
+        planets: 'perfectShot', // Use same map as perfect shot
+        hint: 'Multiple launches in different zones earn more points',
+        reward: '🌟 Point Master'
+      },
+      {
+        id: 'binary-orbit',
+        name: '🔄 Binary Orbit',
+        difficulty: 'Hard',
+        description: 'Orbit between two planets for 10 seconds',
+        goal: 'orbit',
+        targetScore: 0,
+        timeLimit: null,
+        planets: 'binaryChallenge', // Use custom binary map
+        requiredOrbitTime: 10000,
+        hint: 'Launch between the planets with balanced velocity',
+        reward: '🌌 Binary Navigator'
+      },
+      {
+        id: 'triple-threat',
+        name: '🌠 Triple Threat',
+        difficulty: 'Hard',
+        description: 'Navigate three planets and score 150 points',
+        goal: 'score',
+        targetScore: 150,
+        timeLimit: 90000, // 90 seconds
+        planets: 'tripleChallenge', // Use custom triple map
+        requiredOrbitTime: 3000,
+        hint: 'Use gravity assists to move between planets',
+        reward: '👑 Master Navigator'
+      },
+      {
+        id: 'speed-run',
+        name: '⚡ Speed Run',
+        difficulty: 'Easy',
+        description: 'Achieve orbit in under 30 seconds',
+        goal: 'orbit',
+        targetScore: 0,
+        timeLimit: 30000, // 30 seconds
+        planets: 'beginnerOrbit', // Use same map as beginner
+        requiredOrbitTime: 3000,
+        hint: 'Quick launch, don\'t overthink it!',
+        reward: '⚡ Quick Draw'
+      }
+    ]
   },
 
   // UI Settings
