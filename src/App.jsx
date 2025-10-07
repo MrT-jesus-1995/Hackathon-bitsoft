@@ -30,6 +30,7 @@ function App() {
 
   const [showAI, setShowAI] = useState(false);
   const [aiContext, setAiContext] = useState(null);
+  const [lastLaunch, setLastLaunch] = useState(null);
 
   const handleLaunch = (angle, power) => {
     setSimulationParams(prev => ({ ...prev, angle, launchPower: power }));
@@ -37,8 +38,17 @@ function App() {
   };
 
   const handleLaunchFromCanvas = (position, velocity) => {
+    // Store the last launch data
+    setLastLaunch({ position, velocity });
     // Launch triggered from canvas drag - just start the simulation
     setSimulationState(prev => ({ ...prev, isRunning: true, trajectory: [] }));
+  };
+
+  const handleRepeatLastLaunch = () => {
+    if (lastLaunch && !simulationState.isRunning) {
+      // Trigger a relaunch with the same parameters
+      setSimulationState(prev => ({ ...prev, isRunning: true, trajectory: [] }));
+    }
   };
 
   const handleReset = () => {
@@ -158,10 +168,11 @@ function App() {
 
             {/* Launch Controls */}
             <LaunchControls
-              onLaunch={handleLaunch}
               onReset={handleReset}
               isRunning={simulationState.isRunning}
               params={simulationParams}
+              lastLaunch={lastLaunch}
+              onRepeatLaunch={handleRepeatLastLaunch}
             />
 
             {/* AI Button */}
