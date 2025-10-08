@@ -260,14 +260,6 @@ The AI explains what’s happening — teaching real orbital mechanics concepts 
 
 ## 🧪 Development
 
-### Running Tests
-
-```bash
-npm test
-# or
-yarn test
-```
-
 ### Building for Production
 
 ```bash
@@ -275,24 +267,6 @@ npm run build
 # or
 yarn build
 ```
-
-### Deployment
-
-The app is configured for easy deployment to Vercel or Netlify:
-
-**Vercel:**
-```bash
-npm install -g vercel
-vercel
-```
-
-**Netlify:**
-```bash
-npm install -g netlify-cli
-netlify deploy
-```
-
----
 
 ## 🔧 Configuration
 
