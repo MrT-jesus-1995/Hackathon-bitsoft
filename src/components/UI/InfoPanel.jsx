@@ -1,13 +1,73 @@
 import React from 'react';
 import { getOutcomeColor, getOutcomeEmoji, getOutcomeDescription } from '../../utils/helpers';
 
-const InfoPanel = ({ outcome, trajectoryLength }) => {
+const InfoPanel = ({ outcome, trajectoryLength, isRunning, isPaused, onPause, onResume, timeScale = 1, onTimeScaleChange }) => {
+  const timeScales = [
+    { value: -2, label: '◀◀', emoji: '⏪', description: 'Reverse 2×' },
+    { value: -1, label: '◀', emoji: '◀️', description: 'Reverse' },
+    { value: 0.25, label: '0.25×', emoji: '🐌', description: 'Slow Motion' },
+    { value: 0.5, label: '0.5×', emoji: '🐢', description: 'Half Speed' },
+    { value: 1, label: '1×', emoji: '▶️', description: 'Normal' },
+    { value: 2, label: '2×', emoji: '⏩', description: 'Fast' },
+    { value: 4, label: '4×', emoji: '⚡', description: 'Super Fast' }
+  ];
+
   return (
     <div className="bg-space-medium/30 backdrop-blur-sm rounded-2xl p-6 border border-space-light/20">
       <h2 className="text-xl font-bold text-white mb-4 flex items-center">
         <span className="text-2xl mr-2">📊</span>
         Status
       </h2>
+
+      {/* Time Control Panel */}
+      {(isRunning || trajectoryLength > 0) && onTimeScaleChange && (
+        <div className="mb-4 bg-space-dark/50 rounded-xl p-4 border border-space-light/10">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-semibold text-gray-300">⏱️ Time Control</span>
+            <span className="text-xs text-blue-400 font-mono">
+              {timeScales.find(s => s.value === timeScale)?.description || 'Normal'}
+            </span>
+          </div>
+
+          {/* Playback Speed Buttons */}
+          <div className="grid grid-cols-7 gap-1 mb-3">
+            {timeScales.map((scale) => (
+              <button
+                key={scale.value}
+                onClick={() => onTimeScaleChange(scale.value)}
+                disabled={isPaused || (!isRunning && trajectoryLength === 0)}
+                className={`py-2 px-1 rounded-lg text-xs font-bold transition-all duration-200 ${
+                  timeScale === scale.value
+                    ? scale.value < 0 
+                      ? 'bg-red-500 text-white shadow-lg shadow-red-500/30 scale-105'
+                      : 'bg-blue-500 text-white shadow-lg shadow-blue-500/30 scale-105'
+                    : scale.value < 0
+                      ? 'bg-red-900/30 text-red-400 hover:bg-red-900/50 hover:text-red-300'
+                      : 'bg-space-light/30 text-gray-400 hover:bg-space-light/50 hover:text-white'
+                } ${(isPaused || (!isRunning && trajectoryLength === 0)) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                title={scale.description}
+              >
+                <div className="text-base">{scale.emoji}</div>
+                <div className="mt-1">{scale.label}</div>
+              </button>
+            ))}
+          </div>
+
+          {/* Pause/Resume Button */}
+          {(onPause || onResume) && (isRunning || isPaused) && (
+            <button
+              onClick={isPaused ? onResume : onPause}
+              className={`w-full py-2 px-4 rounded-lg font-bold transition-all duration-200 ${
+                isPaused
+                  ? 'bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30'
+                  : 'bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 border border-yellow-500/30'
+              }`}
+            >
+              {isPaused ? '▶️ Continue Simulation' : '⏸️ Pause Simulation'}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Outcome Display */}
       <div className="mb-4">

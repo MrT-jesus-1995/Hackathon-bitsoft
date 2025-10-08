@@ -41,6 +41,8 @@ function App() {
   const [gameMode, setGameMode] = useLocalStorage('gameMode', 'free');
   const [currentPuzzle, setCurrentPuzzle] = useState(null);
   const [puzzleAttempts, setPuzzleAttempts] = useState(0);
+  const [timeScale, setTimeScale] = useState(1); // Simulation speed multiplier
+  const [isPaused, setIsPaused] = useState(false);
 
   const handleLaunchFromCanvas = (position, velocity) => {
     // Store the last launch data
@@ -83,12 +85,34 @@ function App() {
       outcome: null,
     });
     setShowAI(false);
+    setTimeScale(1); // Reset time scale
+    setIsPaused(false);
   };
 
   const handleSimulationComplete = (outcome, data) => {
     setSimulationState(prev => ({ ...prev, outcome, isRunning: false }));
     setAiContext({ outcome, data, params: simulationParams });
     setShowAI(true);
+    setIsPaused(false); // Unpause when simulation completes
+  };
+
+  const handleTimeScaleChange = (newScale) => {
+    setTimeScale(newScale);
+    
+    // If changing to reverse mode and simulation is stopped, restart it for reverse playback
+    if (newScale < 0 && !simulationState.isRunning && simulationState.trajectory.length > 0) {
+      setSimulationState(prev => ({ ...prev, isRunning: true }));
+    }
+  };
+
+  const handlePause = () => {
+    setIsPaused(true);
+    setSimulationState(prev => ({ ...prev, isRunning: false }));
+  };
+
+  const handleResume = () => {
+    setIsPaused(false);
+    setSimulationState(prev => ({ ...prev, isRunning: true }));
   };
 
   const handleParamChange = (param, value) => {
@@ -171,6 +195,7 @@ function App() {
             onLaunchFromCanvas={handleLaunchFromCanvas}
             gameMode={gameMode}
             currentPuzzle={currentPuzzle}
+            timeScale={timeScale}
           />
         </div>
 
@@ -216,6 +241,12 @@ function App() {
             <InfoPanel 
               outcome={simulationState.outcome}
               trajectoryLength={simulationState.trajectory.length}
+              isRunning={simulationState.isRunning}
+              isPaused={isPaused}
+              onPause={handlePause}
+              onResume={handleResume}
+              timeScale={timeScale}
+              onTimeScaleChange={handleTimeScaleChange}
             />
 
             {/* Planet Controls */}

@@ -3,7 +3,7 @@ import { PhysicsEngine, Vector2D } from '../../utils/physics';
 import { degreesToRadians } from '../../utils/helpers';
 import { CONFIG } from '../../config';
 
-const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRunning, onLaunchFromCanvas, gameMode = 'free', currentPuzzle = null }) => {
+const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRunning, onLaunchFromCanvas, gameMode = 'free', currentPuzzle = null, timeScale = 1 }) => {
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
   const animationRef = useRef(null);
@@ -16,6 +16,11 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
   const cachedPrediction = useRef(null); // Cache last prediction for performance
   const isDraggingRef = useRef(false); // Use ref for immediate updates in render loop
   const [isDragging, setIsDragging] = useState(false); // State for UI updates only
+
+  // Reverse playback state
+  const isReversing = useRef(false);
+  const reverseIndex = useRef(0);
+  const fullTrajectory = useRef([]); // Store complete trajectory for reverse playback
 
   // Zoom and Pan state
   const zoom = useRef(1); // Zoom level (1 = 100%)
@@ -102,10 +107,8 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
       updateCount.current = 0;
     }
     
-    // Clear launch data after use
-    if (!isRunning) {
-      lastLaunchData.current = null;
-    }
+    // Keep launch data available for repeat launches
+    // Don't clear it anymore so "Repeat Last Launch" works
   }, [isRunning, params]);
 
   // Physics update loop with time limits
@@ -114,14 +117,52 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
 
     const maxTime = params.maxSimulationTime || CONFIG.simulation.maxSimulationTime;
     const maxUpdates = CONFIG.simulation.maxSimulationUpdates;
-
+    
+    // Check if we're in reverse mode
+    const isReverse = timeScale < 0;
+    isReversing.current = isReverse;
+    
+    // For reverse playback, we need the full trajectory first
+    if (isReverse && engineRef.current?.trajectory?.length > 0) {
+      fullTrajectory.current = [...engineRef.current.trajectory];
+      reverseIndex.current = fullTrajectory.current.length - 1;
+    }
+    
+    // Adjust update rate based on time scale
+    const absTimeScale = Math.abs(timeScale);
+    const adjustedUpdateRate = Math.max(8, CONFIG.physics.updateRate / absTimeScale);
+    
     const updateInterval = setInterval(() => {
+      // Handle reverse playback
+      if (isReverse && fullTrajectory.current.length > 0) {
+        const step = Math.max(1, Math.round(absTimeScale));
+        reverseIndex.current = Math.max(0, reverseIndex.current - step);
+        
+        // Create reversed trajectory slice
+        const reversedTrajectory = fullTrajectory.current.slice(0, reverseIndex.current + 1);
+        
+        // Update engine trajectory for rendering
+        if (engineRef.current) {
+          engineRef.current.trajectory = reversedTrajectory;
+          onTrajectoryUpdate(reversedTrajectory);
+        }
+        
+        // Stop when we reach the beginning
+        if (reverseIndex.current <= 0) {
+          console.log('🔄 Reverse playback completed');
+          clearInterval(updateInterval);
+        }
+        return;
+      }
+      
+      // Normal forward playback
       if (engineRef.current && engineRef.current.isActive) {
         // Check time limit
         const elapsedTime = Date.now() - simulationStartTime.current;
         if (elapsedTime >= maxTime) {
           console.log(`Simulation stopped: Time limit reached (${maxTime}ms)`);
           engineRef.current.isActive = false;
+          fullTrajectory.current = [...engineRef.current.trajectory]; // Save for reverse
           const data = engineRef.current.getData();
           onSimulationComplete(engineRef.current.outcome || 'timeout', data);
           clearInterval(updateInterval);
@@ -133,27 +174,35 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
         if (updateCount.current >= maxUpdates) {
           console.log(`Simulation stopped: Update limit reached (${maxUpdates} updates)`);
           engineRef.current.isActive = false;
+          fullTrajectory.current = [...engineRef.current.trajectory]; // Save for reverse
           const data = engineRef.current.getData();
           onSimulationComplete(engineRef.current.outcome || 'timeout', data);
           clearInterval(updateInterval);
           return;
         }
 
-        // Update physics
-        engineRef.current.update();
+        // Update physics (multiple times for faster time scales)
+        const updatesPerFrame = Math.max(1, Math.round(absTimeScale));
+        for (let i = 0; i < updatesPerFrame; i++) {
+          if (engineRef.current.isActive) {
+            engineRef.current.update();
+          }
+        }
+        fullTrajectory.current = [...engineRef.current.trajectory]; // Always save latest
         onTrajectoryUpdate(engineRef.current.trajectory);
 
         // Check if simulation ended naturally
         if (!engineRef.current.isActive && engineRef.current.outcome) {
+          fullTrajectory.current = [...engineRef.current.trajectory]; // Save for reverse
           const data = engineRef.current.getData();
           onSimulationComplete(engineRef.current.outcome, data);
           clearInterval(updateInterval);
         }
       }
-    }, CONFIG.physics.updateRate); // Use config update rate
+    }, adjustedUpdateRate); // Use time-scaled update rate
 
     return () => clearInterval(updateInterval);
-  }, [isRunning, onSimulationComplete, onTrajectoryUpdate, params.maxSimulationTime]);
+  }, [isRunning, onSimulationComplete, onTrajectoryUpdate, params.maxSimulationTime, timeScale]);
 
   // Coordinate transformation helpers
   // Inverse of: translate(WIDTH/2, HEIGHT/2), scale(zoom), translate(-WIDTH/2 + offset.x/zoom, -HEIGHT/2 + offset.y/zoom)
@@ -923,6 +972,35 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
           🎯 Reset
         </button>
       </div>
+
+      {/* Time Scale Indicator - Top Right */}
+      {(isRunning || engineRef.current?.trajectory?.length > 0) && timeScale !== 1 && (
+        <div className={`absolute top-4 right-4 z-10 backdrop-blur-sm px-4 py-2 rounded-lg border shadow-lg animate-pulse ${
+          timeScale < 0 
+            ? 'bg-gradient-to-r from-red-600 to-orange-600 border-red-400/50 shadow-red-500/30'
+            : 'bg-gradient-to-r from-blue-600 to-purple-600 border-blue-400/50 shadow-blue-500/30'
+        }`}>
+          <div className="text-center">
+            <div className="text-2xl mb-1">
+              {timeScale === -2 ? '⏪' : timeScale === -1 ? '◀️' : timeScale === 0.25 ? '🐌' : timeScale === 0.5 ? '🐢' : timeScale === 2 ? '⏩' : '⚡'}
+            </div>
+            <div className="text-xs font-bold text-white">
+              {timeScale < 0 ? '🔄 REVERSE' : `${timeScale}× Speed`}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Game Mode Badge - Top Center */}
+      {gameMode !== 'free' && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-gradient-to-r from-orange-500 to-red-600 backdrop-blur-sm px-4 py-2 rounded-lg border border-orange-400/50 shadow-lg">
+          <div className="text-white font-bold text-sm">
+            {gameMode === 'target' && '🎯 Target Practice'}
+            {gameMode === 'puzzle' && '🧩 Puzzle Mode'}
+            {gameMode === 'challenge' && '🏆 Challenge Mode'}
+          </div>
+        </div>
+      )}
 
       {/* Status Bar - Bottom Center */}
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10 bg-space-dark/80 backdrop-blur-sm px-6 py-3 rounded-lg border border-space-light/30">
