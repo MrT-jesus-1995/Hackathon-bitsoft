@@ -97,9 +97,8 @@ const SimulationControls = ({ params, onParamChange, disabled }) => {
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => {
-              onParamChange('gravity', 1.0);
+              onParamChange('gravity', 50.0);
               onParamChange('launchPower', 5);
-              onParamChange('angle', 45);
             }}
             disabled={disabled}
             className="px-3 py-2 bg-space-light/50 hover:bg-space-light text-white text-sm rounded-lg transition-colors disabled:opacity-50"
@@ -110,7 +109,6 @@ const SimulationControls = ({ params, onParamChange, disabled }) => {
             onClick={() => {
               onParamChange('gravity', 0.5);
               onParamChange('launchPower', 8);
-              onParamChange('angle', 90);
             }}
             disabled={disabled}
             className="px-3 py-2 bg-space-light/50 hover:bg-space-light text-white text-sm rounded-lg transition-colors disabled:opacity-50"
@@ -121,7 +119,6 @@ const SimulationControls = ({ params, onParamChange, disabled }) => {
             onClick={() => {
               onParamChange('gravity', 2.0);
               onParamChange('launchPower', 10);
-              onParamChange('angle', 60);
             }}
             disabled={disabled}
             className="px-3 py-2 bg-space-light/50 hover:bg-space-light text-white text-sm rounded-lg transition-colors disabled:opacity-50"
@@ -132,7 +129,6 @@ const SimulationControls = ({ params, onParamChange, disabled }) => {
             onClick={() => {
               onParamChange('gravity', 1.2);
               onParamChange('launchPower', 6.5);
-              onParamChange('angle', 75);
             }}
             disabled={disabled}
             className="px-3 py-2 bg-space-light/50 hover:bg-space-light text-white text-sm rounded-lg transition-colors disabled:opacity-50"

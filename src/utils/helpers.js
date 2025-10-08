@@ -118,8 +118,7 @@ export function debounce(func, wait) {
  * Check if API key is configured
  */
 export function isAPIKeyConfigured() {
-  return !!process.env.REACT_APP_OPENAI_API_KEY && 
-         process.env.REACT_APP_OPENAI_API_KEY !== 'your_openai_api_key_here';
+  return !!process.env.REACT_APP_OPENAI_API_KEY ;
 }
 
 export default {

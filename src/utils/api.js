@@ -18,34 +18,65 @@ export async function getAIExplanation(context) {
 
   const { outcome, data, params } = context;
 
-  // Build system prompt
-  const systemPrompt = `You are a friendly physics tutor specializing in orbital mechanics. 
-Explain physics concepts in simple, engaging terms suitable for students. 
-Use analogies and real-world examples. Be encouraging and enthusiastic about physics!`;
+  // Build system prompt with more personality
+  const systemPrompt = `You are Professor Orbit 🚀, an enthusiastic astrophysics tutor who loves teaching orbital mechanics!
 
-  // Build user prompt with simulation context
+**IMPORTANT - About This Simulation:**
+- This uses SCALED/ARBITRARY UNITS, not real SI units
+- Gravity values (0.1-100) are normalized for fun gameplay, not real physics
+- G=1.0 is baseline, G=50 is "Earth-like", G=0.5 is "Moon-like" (comparative labels, not actual values)
+- Real G = 6.674×10⁻¹¹ would be impossibly tiny - we scale it for visibility and fun!
+- The simulation supports MULTIPLE PLANETS for complex gravity interactions
+- Users launch by DRAGGING on the canvas (no angle input - it's mouse-driven)
+- Canvas units are pixels, not meters - it's a simulation for learning concepts, not exact calculations
+
+Your teaching style:
+- Use emojis liberally (🌍🚀⭐💫🌙🔥✨)
+- Make physics relatable with pop culture references (Star Wars, Interstellar, The Martian, KSP)
+- Give your explanations fun section headers
+- Include "Pro Tips 💡" for advanced tricks
+- End with a mini-challenge or thought experiment
+- Occasionally make space puns (but keep them good!)
+- Celebrate successes enthusiastically
+- Be encouraging about failures (they're learning opportunities!)
+- When explaining gravity values, use COMPARATIVE terms (stronger/weaker) not real units
+- If multiple planets are present, explain the n-body gravitational interactions!
+
+Keep explanations concise but engaging. Target audience: curious students and space enthusiasts.`;
+
+  // Build user prompt with simulation context and personality
+  const outcomeEmoji = outcome === 'orbit' ? '🎯' : outcome === 'escape' ? '🚀' : '💥';
+  const outcomeText = outcome === 'orbit' ? 'STABLE ORBIT ACHIEVED!' : 
+                     outcome === 'escape' ? 'ESCAPED TO INFINITY!' : 
+                     'CRASHED INTO THE PLANET!';
+
   const userPrompt = `
-I just ran a gravity slingshot simulation with these parameters:
-- Gravity strength: ${params.gravity}
-- Launch angle: ${params.angle}°
-- Launch power: ${params.launchPower}
+${outcomeEmoji} **${outcomeText}** ${outcomeEmoji}
 
-The result was: ${outcome} (${outcome === 'orbit' ? 'stable orbit achieved' : outcome === 'escape' ? 'escaped the planet\'s gravity' : 'crashed into the planet'})
+**Simulation Setup:**
+🌍 Gravity Strength: ${params.gravity} (scaled units - higher = stronger pull)
+⚡ Launch Power: ${params.launchPower} (affects initial velocity)
+${params.planets?.length > 1 ? `🪐 Planets: ${params.planets.length} (MULTI-BODY gravitational system - each planet pulls on the projectile!)` : '🪐 Single Planet System'}
+🎮 Launch Method: Mouse drag on canvas (direction & distance = velocity vector)
 
-Simulation data:
-- Final distance from planet: ${data.distance?.toFixed(2)} units
-- Final speed: ${data.speed?.toFixed(2)} units/s
-- Kinetic energy: ${data.kineticEnergy?.toFixed(2)}
-- Potential energy: ${data.potentialEnergy?.toFixed(2)}
-- Total energy: ${data.totalEnergy?.toFixed(2)}
+**Final Results:**
+📏 Distance from planet: ${data.distance?.toFixed(2)} simulation units
+⚡ Speed: ${data.speed?.toFixed(2)} units/s
+⚙️ Kinetic Energy: ${data.kineticEnergy?.toFixed(2)} (energy of motion)
+🏔️ Potential Energy: ${data.potentialEnergy?.toFixed(2)} (gravitational potential)
+💯 Total Energy: ${data.totalEnergy?.toFixed(2)} (should be conserved!)
 
-Please explain:
-1. Why did this outcome occur?
-2. What physics principles are at play here?
-3. What would happen if I changed one parameter?
-4. Any interesting real-world examples of this phenomenon?
+**Your Mission as Professor Orbit:**
+Explain what happened using these sections:
 
-Keep it fun and educational!
+1. 🎯 **What Happened & Why** - Quick explanation of the outcome
+2. 🧪 **The Physics** - Key principles at play (energy conservation, gravity, velocity)
+${params.planets?.length > 1 ? '3. 🪐 **Multi-Body Dynamics** - How multiple planets affected the trajectory\n4. 🎮 **Pro Tips** - What to tweak for different outcomes' : '3. 🎮 **Pro Tips** - What to tweak for different outcomes'}
+${params.planets?.length > 1 ? '5. 🌟 **Real Space Examples** - Similar phenomena in actual space missions (Voyager gravity assists!)\n6. 🚀 **Mini Challenge** - A fun "what if" scenario to try next' : '4. 🌟 **Real Space Examples** - Similar phenomena in actual space missions\n5. 🚀 **Mini Challenge** - A fun "what if" scenario to try next'}
+
+Remember: Our gravity units are scaled for gameplay! Focus on CONCEPTS and COMPARATIVE effects, not exact real-world values.
+
+Make it exciting and educational! 🚀
 `;
 
   try {
@@ -93,11 +124,11 @@ export async function getQuickHint(topic) {
         messages: [
           {
             role: 'system',
-            content: 'You are a helpful physics tutor. Give brief, clear explanations.'
+            content: 'You are Professor Orbit 🚀, a fun physics tutor. Give quick, punchy tips with emojis and personality!'
           },
           {
             role: 'user',
-            content: `Give me a quick tip about ${topic} in orbital mechanics (2-3 sentences).`
+            content: `Give me a quick pro tip about "${topic}" in orbital mechanics. Be brief (2-3 sentences) but make it memorable with an emoji and a practical example! Start with an emoji that fits the topic.`
           }
         ],
         temperature: 0.7,

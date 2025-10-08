@@ -3,10 +3,11 @@ import PhysicsCanvas from './components/Canvas/PhysicsCanvas';
 import LaunchControls from './components/Controls/LaunchControls';
 import SimulationControls from './components/Controls/SimulationControls';
 import PlanetControls from './components/Controls/PlanetControls';
-import ChallengeMode from './components/Controls/ChallengeMode';
+import GameModeSelector from './components/Controls/GameModeSelector';
 import ChatOverlay from './components/AI/ChatOverlay';
 import Dashboard from './components/UI/Dashboard';
 import InfoPanel from './components/UI/InfoPanel';
+import useLocalStorage from './hooks/useLocalStorage';
 import CONFIG from './config';
 
 function App() {
@@ -18,7 +19,6 @@ function App() {
   const [simulationParams, setSimulationParams] = useState({
     gravity: 1.0,
     launchPower: 5,
-    angle: 45,
     maxSimulationTime: CONFIG.simulation.maxSimulationTime,
     planets: planets, // Add planets to simulation params
   });
@@ -38,11 +38,9 @@ function App() {
     timeInZone: 0,
     startTime: null,
   });
-
-  const handleLaunch = (angle, power) => {
-    setSimulationParams(prev => ({ ...prev, angle, launchPower: power }));
-    setSimulationState(prev => ({ ...prev, isRunning: true, trajectory: [] }));
-  };
+  const [gameMode, setGameMode] = useLocalStorage('gameMode', 'free');
+  const [currentPuzzle, setCurrentPuzzle] = useState(null);
+  const [puzzleAttempts, setPuzzleAttempts] = useState(0);
 
   const handleLaunchFromCanvas = (position, velocity) => {
     // Store the last launch data
@@ -108,7 +106,36 @@ function App() {
     handleReset();
   };
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const handleGameModeChange = (mode) => {
+    setGameMode(mode); // Automatically saves to localStorage!
+    if (mode !== 'puzzle') {
+      setCurrentPuzzle(null);
+      setPuzzleAttempts(0);
+    }
+    handleReset();
+  };
+
+  const handlePuzzleSelect = (puzzle) => {
+    setCurrentPuzzle(puzzle);
+    setPuzzleAttempts(puzzle.allowedAttempts);
+    
+    // Load puzzle planet scenario
+    const scenarioName = puzzle.planets;
+    const scenarioPlanets = CONFIG.planets.scenarios[scenarioName]?.planets || CONFIG.planets.scenarios.single.planets;
+    handlePlanetsChange(scenarioPlanets);
+    
+    // Set puzzle starting values (not the solution - that would spoil it!)
+    setSimulationParams(prev => ({
+      ...prev,
+      gravity: puzzle.startGravity,
+      launchPower: puzzle.startPower,
+      planets: scenarioPlanets
+    }));
+    
+    handleReset();
+  };
+
+  const [sidebarOpen, setSidebarOpen] = useLocalStorage('sidebarOpen', true);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-space-dark via-space-medium to-space-dark flex flex-col">
@@ -142,6 +169,8 @@ function App() {
             }
             isRunning={simulationState.isRunning}
             onLaunchFromCanvas={handleLaunchFromCanvas}
+            gameMode={gameMode}
+            currentPuzzle={currentPuzzle}
           />
         </div>
 
@@ -173,8 +202,12 @@ function App() {
               </button>
             </div>
 
-            {/* Challenge Mode */}
-            <ChallengeMode
+            {/* Game Mode Selector (includes all modes: Free, Target, Puzzle, Challenge) */}
+            <GameModeSelector
+              currentMode={gameMode}
+              onModeChange={handleGameModeChange}
+              onPuzzleSelect={handlePuzzleSelect}
+              currentPuzzle={currentPuzzle}
               onChallengeSelect={handleChallengeSelect}
               currentChallenge={currentChallenge}
             />

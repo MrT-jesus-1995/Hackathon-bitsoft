@@ -16,6 +16,30 @@ export const CONFIG = {
     
     // Loading dots animation speed
     loadingDotsSpeed: 500, // Update every 500ms
+    
+    // Quick topic buttons for hints
+    quickTopics: [
+      { emoji: '🎯', label: 'Orbital Velocity', topic: 'calculating the right speed for stable orbits' },
+      { emoji: '🚀', label: 'Escape Velocity', topic: 'how to break free from gravity' },
+      { emoji: '💫', label: 'Gravity Assists', topic: 'using planets to gain speed' },
+      { emoji: '⚡', label: 'Energy Transfer', topic: 'kinetic vs potential energy in orbits' },
+      { emoji: '🌊', label: 'Slingshot Effect', topic: 'how gravity slingshots work' },
+      { emoji: '🎮', label: 'Pro Tips', topic: 'advanced techniques for perfect launches' },
+    ],
+    
+    // Fun space facts for random display
+    spaceFacts: [
+      '🌍 Earth itself is in a gravity slingshot around the Sun at 30 km/s!',
+      '🚀 Voyager 1 used gravity assists from Jupiter and Saturn to reach interstellar space!',
+      '🌙 The Apollo missions had to be precise within seconds for lunar orbit insertion!',
+      '⚡ A slingshot maneuver can double a spacecraft\'s velocity without using any fuel!',
+      '🪐 Cassini used 4 gravity assists (2 Venus, 1 Earth, 1 Jupiter) to reach Saturn!',
+      '💫 Every satellite in orbit is constantly "falling" - it just keeps missing Earth!',
+      '🎯 The ISS travels at 28,000 km/h but feels weightless because it\'s in free fall!',
+      '🌟 Black holes can slingshot objects at nearly the speed of light!',
+      '🛰️ GPS satellites need to account for relativity - time moves faster in orbit!',
+      '🌌 The Parker Solar Probe used Venus flybys to dive closer to the Sun!',
+    ],
   },
 
   // Physics Settings
@@ -404,56 +428,118 @@ export const CONFIG = {
     limits: {
       mass: { min: 50, max: 3000, step: 50 },
       radius: { min: 10, max: 100, step: 5 },
-      x: { min: 50, max: 750, step: 10 },
-      y: { min: 50, max: 550, step: 10 },
+      x: { min: -1000, max: 1000, step: 10 },
+      y: { min:  -1000, max: 1000, step: 10 },
     },
   },
 
-  // Target Rings Settings
-  targetRings: {
-    enabled: false, // Can be toggled on/off
-    zones: [
-      {
-        id: 'perfect',
-        minRadius: 60,
-        maxRadius: 80,
-        color: 'rgba(34, 197, 94, 0.2)', // Green
-        strokeColor: 'rgba(34, 197, 94, 0.7)',
-        points: 100,
-        label: 'Perfect!'
-      },
-      {
-        id: 'great',
-        minRadius: 80,
-        maxRadius: 110,
-        color: 'rgba(59, 130, 246, 0.15)', // Blue
-        strokeColor: 'rgba(59, 130, 246, 0.6)',
-        points: 50,
-        label: 'Great'
-      },
-      {
-        id: 'good',
-        minRadius: 110,
-        maxRadius: 145,
-        color: 'rgba(168, 85, 247, 0.12)', // Purple
-        strokeColor: 'rgba(168, 85, 247, 0.5)',
-        points: 25,
-        label: 'Good'
-      },
-      {
-        id: 'ok',
-        minRadius: 145,
-        maxRadius: 185,
-        color: 'rgba(251, 146, 60, 0.1)', // Orange
-        strokeColor: 'rgba(251, 146, 60, 0.4)',
-        points: 10,
-        label: 'OK'
-      }
-    ],
-    // How long projectile must stay in zone to score (ms)
-    scoreThreshold: 2000, // 2 seconds
-    // Time in zone before counting as "orbit"
-    orbitThreshold: 5000, // 5 seconds
+  // Game Modes Settings
+  gameModes: {
+    // Target Practice Mode
+    targetPractice: {
+      enabled: true,
+      targets: [
+        {
+          id: 'target-1',
+          x: 800,
+          y: 300,
+          radius: 40,
+          points: 50,
+          color: '#10b981',
+          label: 'Target Zone'
+        },
+        {
+          id: 'target-2',
+          x: 400,
+          y: 150,
+          radius: 30,
+          points: 100,
+          color: '#3b82f6',
+          label: 'Bonus Zone'
+        },
+        {
+          id: 'target-3',
+          x: 600,
+          y: 500,
+          radius: 50,
+          points: 75,
+          color: '#f59e0b',
+          label: 'Challenge Zone'
+        }
+      ],
+      hitRadius: 5, // Projectile hit detection radius
+      showTargets: true,
+      scorePerSecondInTarget: 10, // Points per second while in target
+    },
+    
+    // Puzzle Mode
+    puzzleMode: {
+      enabled: true,
+      puzzles: [
+        {
+          id: 'puzzle-1',
+          name: '🧩 Gravity Puzzle #1',
+          difficulty: 'Easy',
+          description: 'Find the exact gravity and power to hit the target',
+          targetX: 700,
+          targetY: 300,
+          targetRadius: 50,
+          allowedAttempts: 5,
+          startGravity: 0.5, // Starting hint value
+          startPower: 5.0,   // Starting hint value
+          solutionGravity: 1.0,
+          solutionPower: 7.5,
+          tolerance: 0.2, // How close you need to be to solution
+          hint: 'Try medium gravity and power around 7-8',
+          planets: 'single'
+        },
+        {
+          id: 'puzzle-2',
+          name: '🧩 Binary Balance',
+          difficulty: 'Medium',
+          description: 'Navigate between two planets to hit the target',
+          targetX: 600,
+          targetY: 400,
+          targetRadius: 40,
+          allowedAttempts: 8,
+          startGravity: 1.0,
+          startPower: 8.0,
+          solutionGravity: 1.5,
+          solutionPower: 6.0,
+          tolerance: 0.3,
+          hint: 'Use the gravity from both planets!',
+          planets: 'binaryChallenge'
+        },
+        {
+          id: 'puzzle-3',
+          name: '🧩 Perfect Slingshot',
+          difficulty: 'Hard',
+          description: 'Use gravity assist to reach the distant target',
+          targetX: 1000,
+          targetY: 400,
+          targetRadius: 35,
+          allowedAttempts: 10,
+          startGravity: 1.5,
+          startPower: 8.0,
+          solutionGravity: 2.0,
+          solutionPower: 5.5,
+          tolerance: 0.4,
+          hint: 'Low power, high gravity - let the planet do the work!',
+          planets: 'single'
+        }
+      ],
+      currentPuzzle: null,
+      attemptsRemaining: 0,
+    },
+    
+    // Trail Effects (always active now!)
+    trails: {
+      enabled: true,
+      fadingEnabled: true,
+      speedColorsEnabled: true,
+      glowEnabled: true,
+      maxTrailLength: 1000, // Maximum points to render
+    }
   },
 
   // Challenge Mode Settings

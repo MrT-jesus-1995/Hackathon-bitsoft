@@ -3,7 +3,7 @@ import { PhysicsEngine, Vector2D } from '../../utils/physics';
 import { degreesToRadians } from '../../utils/helpers';
 import { CONFIG } from '../../config';
 
-const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRunning, onLaunchFromCanvas }) => {
+const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRunning, onLaunchFromCanvas, gameMode = 'free', currentPuzzle = null }) => {
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
   const animationRef = useRef(null);
@@ -89,34 +89,13 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
   // Handle simulation running state
   useEffect(() => {
     if (isRunning && engineRef.current) {
-      // Use mouse launch data if available, otherwise fallback to angle-based
+      // Launch using mouse drag data
       if (lastLaunchData.current) {
-        console.log('✅ Using mouse launch data:', lastLaunchData.current);
+        console.log('✅ Launching with:', lastLaunchData.current);
         engineRef.current.launch(lastLaunchData.current.position, lastLaunchData.current.velocity);
       } else {
-        console.log('⚠️ Using fallback angle-based launch');
-        // Fallback to angle-based launch (for Launch button)
-        const launchAngle = degreesToRadians(params.angle || 45);
-        const launchSpeed = params.launchPower * 2;
-        
-        // Calculate launch position (offset from first planet)
-        const startDistance = 150;
-        const firstPlanet = engineRef.current.planets[0];
-        const planetX = firstPlanet.pos.x;
-        const planetY = firstPlanet.pos.y;
-        
-        const startX = planetX + Math.cos(launchAngle) * startDistance;
-        const startY = planetY + Math.sin(launchAngle) * startDistance;
-        const startPos = new Vector2D(startX, startY);
-        
-        // Calculate velocity perpendicular to radius for better orbits
-        const velAngle = launchAngle + Math.PI / 2;
-        const velocity = new Vector2D(
-          Math.cos(velAngle) * launchSpeed,
-          Math.sin(velAngle) * launchSpeed
-        );
-        
-        engineRef.current.launch(startPos, velocity);
+        console.warn('⚠️ No launch data available. Please drag on canvas to launch.');
+        return;
       }
       
       simulationStartTime.current = Date.now();
@@ -251,7 +230,7 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
     // Draw projectile
     if (engine.isActive || engine.trajectory.length > 0) {
       const pos = engine.trajectory[engine.trajectory.length - 1];
-      drawProjectile(ctx, pos.x, pos.y);
+      drawProjectile(ctx, pos.x, pos.y, engine.trajectory);
     }
 
     // Draw launch preview when dragging
@@ -265,8 +244,21 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
       drawOrbitGuides(ctx, pos.x, pos.y);
     });
 
+    // Draw game mode specific elements
+    // Only show targets in Target Practice mode
+    if (gameMode === 'target' && CONFIG.gameModes?.targetPractice?.showTargets) {
+      drawTargets(ctx, CONFIG.gameModes.targetPractice.targets);
+    }
+    
+    // Only show puzzle target in Puzzle mode
+    if (gameMode === 'puzzle' && currentPuzzle) {
+      drawPuzzleTarget(ctx, currentPuzzle);
+    }
+
     // Restore context state
     ctx.restore();
+    
+   
   };
 
   const drawStars = (ctx) => {
@@ -332,46 +324,248 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
     ctx.restore();
   };
 
+  const drawTargets = (ctx, targets) => {
+    if (!targets || targets.length === 0) return;
+    
+    const uiScale = 1 / zoom.current;
+    
+    targets.forEach(target => {
+      // Pulsing animation
+      const pulse = Math.sin(Date.now() / 500) * 0.1 + 1;
+      
+      // Outer glow
+      const gradient = ctx.createRadialGradient(
+        target.x, target.y, 0,
+        target.x, target.y, target.radius * pulse
+      );
+      gradient.addColorStop(0, target.color + '40');
+      gradient.addColorStop(1, target.color + '00');
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(target.x, target.y, target.radius * pulse, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Target rings
+      ctx.strokeStyle = target.color;
+      ctx.lineWidth = 2 * uiScale;
+      for (let i = 3; i > 0; i--) {
+        ctx.beginPath();
+        ctx.arc(target.x, target.y, (target.radius * i) / 3, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      
+      // Center dot
+      ctx.fillStyle = target.color;
+      ctx.beginPath();
+      ctx.arc(target.x, target.y, 3 * uiScale, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Label
+      ctx.save();
+      ctx.font = `${12 * uiScale}px sans-serif`;
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${target.points} pts`, target.x, target.y + target.radius + 15 * uiScale);
+      ctx.restore();
+    });
+  };
+  
+  const drawPuzzleTarget = (ctx, puzzle) => {
+    if (!puzzle) return;
+    
+    const uiScale = 1 / zoom.current;
+    const { targetX, targetY, targetRadius } = puzzle;
+    
+    // Animated border
+    const rotation = (Date.now() / 1000) % (Math.PI * 2);
+    
+    // Glow
+    const gradient = ctx.createRadialGradient(
+      targetX, targetY, 0,
+      targetX, targetY, targetRadius * 1.5
+    );
+    gradient.addColorStop(0, 'rgba(59, 130, 246, 0.4)');
+    gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(targetX, targetY, targetRadius * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Dashed circle
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = 3 * uiScale;
+    ctx.setLineDash([10 * uiScale, 5 * uiScale]);
+    ctx.beginPath();
+    ctx.arc(targetX, targetY, targetRadius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // Rotating markers
+    for (let i = 0; i < 4; i++) {
+      const angle = rotation + (i * Math.PI / 2);
+      const x = targetX + Math.cos(angle) * (targetRadius + 10 * uiScale);
+      const y = targetY + Math.sin(angle) * (targetRadius + 10 * uiScale);
+      
+      ctx.fillStyle = '#3b82f6';
+      ctx.beginPath();
+      ctx.arc(x, y, 4 * uiScale, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // Label
+    ctx.save();
+    ctx.font = `bold ${14 * uiScale}px sans-serif`;
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.fillText('🎯 TARGET', targetX, targetY + targetRadius + 20 * uiScale);
+    ctx.restore();
+  };
+
   const drawTrajectory = (ctx, trajectory, outcome) => {
     if (trajectory.length < 2) return;
 
     const uiScale = 1 / zoom.current;
-    ctx.lineWidth = 2 * uiScale;
-    ctx.lineCap = 'round';
-
-    // Color based on outcome
-    let color = 'rgba(148, 163, 184, 0.6)'; // default gray
-    if (outcome === 'orbit') color = 'rgba(74, 222, 128, 0.8)';
-    else if (outcome === 'escape') color = 'rgba(251, 191, 36, 0.8)';
-    else if (outcome === 'crash') color = 'rgba(239, 68, 68, 0.8)';
-
-    ctx.strokeStyle = color;
-    ctx.beginPath();
-    ctx.moveTo(trajectory[0].x, trajectory[0].y);
     
+    // Calculate speeds for color mapping
+    const speeds = [];
     for (let i = 1; i < trajectory.length; i++) {
-      ctx.lineTo(trajectory[i].x, trajectory[i].y);
+      const dx = trajectory[i].x - trajectory[i-1].x;
+      const dy = trajectory[i].y - trajectory[i-1].y;
+      speeds.push(Math.sqrt(dx * dx + dy * dy));
     }
-    ctx.stroke();
+    const maxSpeed = Math.max(...speeds, 1);
+    const minSpeed = Math.min(...speeds, 0);
+    
+    // Draw segments with fading trail and speed-based colors
+    for (let i = 1; i < trajectory.length; i++) {
+      const progress = i / trajectory.length;
+      const speedRatio = (speeds[i-1] - minSpeed) / (maxSpeed - minSpeed);
+      
+      // Fade older parts of trail
+      const alpha = 0.3 + (progress * 0.5); // 0.3 to 0.8
+      
+      // Speed-based color (blue = slow, yellow = medium, red = fast)
+      let r, g, b;
+      if (speedRatio < 0.5) {
+        // Blue to Yellow
+        const t = speedRatio * 2;
+        r = Math.floor(100 + (255 - 100) * t);
+        g = Math.floor(150 + (220 - 150) * t);
+        b = Math.floor(255 - 255 * t);
+      } else {
+        // Yellow to Red
+        const t = (speedRatio - 0.5) * 2;
+        r = 255;
+        g = Math.floor(220 - 140 * t);
+        b = Math.floor(50 * (1 - t));
+      }
+      
+      // Outcome-based tint
+      if (outcome === 'orbit') {
+        g = Math.min(255, g + 50); // Greenish tint
+      } else if (outcome === 'escape') {
+        r = Math.min(255, r + 30);
+        g = Math.min(255, g + 30); // Brighter
+      } else if (outcome === 'crash') {
+        r = 255;
+        g = Math.floor(g * 0.5);
+        b = Math.floor(b * 0.5); // More red
+      }
+      
+      // Draw segment with glow
+      ctx.save();
+      ctx.shadowColor = `rgba(${r}, ${g}, ${b}, ${alpha * 0.8})`;
+      ctx.shadowBlur = 8 * uiScale;
+      ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      ctx.lineWidth = (2 + speedRatio * 2) * uiScale; // Thicker when faster
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      
+      ctx.beginPath();
+      ctx.moveTo(trajectory[i-1].x, trajectory[i-1].y);
+      ctx.lineTo(trajectory[i].x, trajectory[i].y);
+      ctx.stroke();
+      ctx.restore();
+    }
   };
 
-  const drawProjectile = (ctx, x, y) => {
+  const drawProjectile = (ctx, x, y, trajectory = []) => {
     const uiScale = 1 / zoom.current;
+    const size = 6 * uiScale;
     
     // Glow
-    const glowGradient = ctx.createRadialGradient(x, y, 2 * uiScale, x, y, 10 * uiScale);
-    glowGradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
-    glowGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    const glowGradient = ctx.createRadialGradient(x, y, 2 * uiScale, x, y, 12 * uiScale);
+    glowGradient.addColorStop(0, 'rgba(255, 100, 50, 0.8)');
+    glowGradient.addColorStop(1, 'rgba(255, 50, 0, 0)');
     ctx.fillStyle = glowGradient;
     ctx.beginPath();
-    ctx.arc(x, y, 10 * uiScale, 0, Math.PI * 2);
+    ctx.arc(x, y, 12 * uiScale, 0, Math.PI * 2);
     ctx.fill();
 
-    // Projectile
-    ctx.fillStyle = '#ffffff';
+    // Rocket ship shape
+    ctx.save();
+    
+    // Calculate direction based on velocity (if available)
+    // For now, we'll point it in direction of motion
+    let angle = 0;
+    if (trajectory.length > 1) {
+      const lastPos = trajectory[trajectory.length - 2];
+      const dx = x - lastPos.x;
+      const dy = y - lastPos.y;
+      angle = Math.atan2(dy, dx);
+    }
+    
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    
+    // Rocket body (main cone)
+    ctx.fillStyle = '#ff6b35';
     ctx.beginPath();
-    ctx.arc(x, y, 5 * uiScale, 0, Math.PI * 2);
+    ctx.moveTo(size * 1.5, 0);
+    ctx.lineTo(-size, -size * 0.6);
+    ctx.lineTo(-size, size * 0.6);
+    ctx.closePath();
     ctx.fill();
+    
+    // Rocket window
+    ctx.fillStyle = '#4ecdc4';
+    ctx.beginPath();
+    ctx.arc(0, 0, size * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Rocket fins
+    ctx.fillStyle = '#ff8c61';
+    ctx.beginPath();
+    ctx.moveTo(-size * 0.8, -size * 0.6);
+    ctx.lineTo(-size * 1.2, -size * 1.1);
+    ctx.lineTo(-size * 0.6, -size * 0.8);
+    ctx.closePath();
+    ctx.fill();
+    
+    ctx.beginPath();
+    ctx.moveTo(-size * 0.8, size * 0.6);
+    ctx.lineTo(-size * 1.2, size * 1.1);
+    ctx.lineTo(-size * 0.6, size * 0.8);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Flame exhaust (animated)
+    const flameLength = 1 + Math.sin(Date.now() / 100) * 0.3;
+    const flameGradient = ctx.createLinearGradient(-size, 0, -size * (1 + flameLength), 0);
+    flameGradient.addColorStop(0, 'rgba(255, 200, 0, 0.9)');
+    flameGradient.addColorStop(0.5, 'rgba(255, 100, 0, 0.7)');
+    flameGradient.addColorStop(1, 'rgba(255, 50, 0, 0)');
+    
+    ctx.fillStyle = flameGradient;
+    ctx.beginPath();
+    ctx.moveTo(-size, 0);
+    ctx.lineTo(-size * (1 + flameLength), -size * 0.4);
+    ctx.lineTo(-size * (1 + flameLength * 0.7), 0);
+    ctx.lineTo(-size * (1 + flameLength), size * 0.4);
+    ctx.closePath();
+    ctx.fill();
+    
+    ctx.restore();
   };
 
   const drawLaunchPreview = (ctx, start, end) => {
@@ -538,45 +732,6 @@ const PhysicsCanvas = ({ params, onSimulationComplete, onTrajectoryUpdate, isRun
     });
   };
 
-  const drawTargetRings = (ctx, x, y, showTargets) => {
-    if (!showTargets) return;
-    
-    const uiScale = 1 / zoom.current;
-    const zones = CONFIG.targetRings?.zones;
-    
-    if (!zones || zones.length === 0) return;
-    
-    // Draw zones from outside to inside for proper layering
-    zones.slice().reverse().forEach((zone, index) => {
-      
-      // Draw filled ring
-      ctx.save();
-      ctx.fillStyle = zone.color;
-      ctx.beginPath();
-      ctx.arc(x, y, zone.maxRadius, 0, Math.PI * 2, false);
-      ctx.arc(x, y, zone.minRadius, 0, Math.PI * 2, true);
-      ctx.fill('evenodd');
-      ctx.restore();
-      
-      // Draw outer stroke
-      ctx.save();
-      ctx.strokeStyle = zone.strokeColor;
-      ctx.lineWidth = 2 * uiScale;
-      ctx.beginPath();
-      ctx.arc(x, y, zone.maxRadius, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-      
-      // Draw inner stroke
-      ctx.save();
-      ctx.strokeStyle = zone.strokeColor;
-      ctx.lineWidth = 2 * uiScale;
-      ctx.beginPath();
-      ctx.arc(x, y, zone.minRadius, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-    });
-  };
 
   const handleMouseDown = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();

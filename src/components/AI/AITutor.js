@@ -56,24 +56,70 @@ export class AITutor {
       orbit: {
         gravity: 1.2,
         launchPower: 6.5,
-        angle: 75,
-        description: 'These settings should create a stable orbit around the planet.',
+        emoji: '🎯',
+        description: '🎯 Perfect orbit setup! Try dragging from the side of the planet with medium power.',
+        tip: 'Aim perpendicular to the planet for the smoothest orbit!',
       },
       escape: {
         gravity: 0.8,
         launchPower: 12,
-        angle: 45,
-        description: 'High velocity will help the projectile escape the planet\'s gravity.',
+        emoji: '🚀',
+        description: '🚀 Escape velocity! Drag far back for maximum power to break free from gravity.',
+        tip: 'The faster you go, the easier it is to escape!',
       },
       crash: {
         gravity: 2.0,
         launchPower: 3,
-        angle: 90,
-        description: 'Low velocity and high gravity will pull the projectile into the planet.',
+        emoji: '💥',
+        description: '💥 Gravity wins! Low power and high gravity = guaranteed crash.',
+        tip: 'Sometimes crashing is the most fun outcome!',
+      },
+      slingshot: {
+        gravity: 1.5,
+        launchPower: 8,
+        emoji: '🌊',
+        description: '🌊 Slingshot maneuver! Swing around the planet to gain speed.',
+        tip: 'Real spacecraft use this to save fuel!',
       },
     };
 
     return suggestions[desiredOutcome] || null;
+  }
+
+  /**
+   * Get a random fun space fact
+   */
+  getRandomSpaceFact() {
+    const facts = [
+      '🌍 Did you know? Earth itself is in a gravity slingshot around the Sun at 30 km/s!',
+      '🚀 Voyager 1 used gravity assists from Jupiter and Saturn to reach interstellar space!',
+      '🌙 The Apollo missions had to be precise within seconds for lunar orbit insertion!',
+      '⚡ A slingshot maneuver can double a spacecraft\'s velocity without using any fuel!',
+      '🪐 Cassini used 4 gravity assists (2 Venus, 1 Earth, 1 Jupiter) to reach Saturn!',
+      '💫 Every satellite in orbit is constantly "falling" - it just keeps missing the Earth!',
+      '🎯 The ISS travels at 28,000 km/h but feels weightless because it\'s in free fall!',
+      '🌟 Black holes can slingshot objects at nearly the speed of light!',
+    ];
+    return facts[Math.floor(Math.random() * facts.length)];
+  }
+
+  /**
+   * Generate achievement messages for cool outcomes
+   */
+  generateAchievement(trajectory, outcome) {
+    const achievements = [];
+    
+    if (outcome === 'orbit' && trajectory.length > 500) {
+      achievements.push('🏆 Long-Duration Orbit Achieved!');
+    }
+    if (outcome === 'escape' && trajectory.length < 100) {
+      achievements.push('⚡ Speed Demon - Ultra-Fast Escape!');
+    }
+    if (trajectory.length > 1000) {
+      achievements.push('⏰ Marathon Orbit - 1000+ frames!');
+    }
+    
+    return achievements;
   }
 
   /**
