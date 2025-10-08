@@ -179,7 +179,6 @@ The AI explains what’s happening — teaching real orbital mechanics concepts 
 | **Framework / UI**     | **React + TailwindCSS**      | Page structure, controls, chat overlay styling                    |
 | **AI Engine**          | **OpenAI API (GPT-4o-mini)** | Generates natural language explanations of the physics simulation |
 | **Backend (optional)** | **FastAPI / Node.js**        | Proxy for API calls or data logging (optional for hackathon)      |
-| **Deployment**         | **Vercel / Netlify**         | Quick, free hosting and live demo deployment                      |
 
 ---
 
